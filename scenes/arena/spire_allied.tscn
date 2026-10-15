@@ -51,7 +51,8 @@ size = Vector3(0.7, 0.8, 0.7)
 material = SubResource("Mat_CyanGlow")
 inner_radius = 3.0
 outer_radius = 3.12
-rings = 32
+rings = 16
+ring_segments = 8
 
 [node name="SpireAllied" type="StaticBody3D"]
 collision_layer = 1

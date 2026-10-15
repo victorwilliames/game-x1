@@ -3,6 +3,7 @@ extends Node3D
 @onready var hero: Hero = $Hero
 @onready var camera_controller: MobaCamera = $CameraPivot
 @onready var target_marker: Node3D = $TargetMarker
+@onready var directional_light: DirectionalLight3D = $DirectionalLight3D
 @onready var fps_label: Label = $UI/MarginContainer/VBoxContainer/FPSLabel
 @onready var info_label: Label = $UI/MarginContainer/VBoxContainer/InfoLabel
 @onready var help_label: Label = $UI/MarginContainer/VBoxContainer/HelpLabel
@@ -16,6 +17,13 @@ const PLAYABLE_MAX_Z: float = 26.0
 var is_headless: bool = false
 var right_mouse_held: bool = false
 var ground_plane := Plane(Vector3.UP, 0.0)
+
+# Performance & telemetry variables
+var current_frame_time_ms: float = 16.6
+var frame_time_acc: float = 0.0
+var frame_time_count: int = 0
+var last_fps_update_time: float = 0.0
+var cached_raf_hz: int = 0
 
 func _ready() -> void:
 	is_headless = DisplayServer.get_name() == "headless"
@@ -52,6 +60,17 @@ func _install_web_scroll_preventer() -> void:
 	(function() {
 		if (window._godot_web_scroll_guard) return;
 		window._godot_web_scroll_guard = true;
+		window._gamex1_raf = { count: 0, fps: 0, last: performance.now() };
+		function tickRAF(now) {
+			window._gamex1_raf.count++;
+			if (now - window._gamex1_raf.last >= 1000) {
+				window._gamex1_raf.fps = Math.round((window._gamex1_raf.count * 1000) / (now - window._gamex1_raf.last));
+				window._gamex1_raf.count = 0;
+				window._gamex1_raf.last = now;
+			}
+			requestAnimationFrame(tickRAF);
+		}
+		requestAnimationFrame(tickRAF);
 		function isCanvasTarget(e) {
 			var canvas = document.getElementById('canvas');
 			return canvas && (e.target === canvas || canvas.contains(e.target));
@@ -76,6 +95,12 @@ func _install_web_scroll_preventer() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if is_headless or not hero:
 		return
+
+	# 0. F1 toggles real-time shadows for live performance diagnosis
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F1:
+			_toggle_shadows()
+			return
 
 	# 1. Camera controller handles Space, Y, MMB Drag and Scroll Wheel
 	if camera_controller and camera_controller.handle_input(event):
@@ -145,6 +170,12 @@ func _on_hero_reached_target() -> void:
 func _on_camera_mode_changed(_mode: MobaCamera.Mode, _mode_name: String) -> void:
 	_update_hud()
 
+func _toggle_shadows() -> void:
+	if directional_light:
+		directional_light.shadow_enabled = not directional_light.shadow_enabled
+		print("[game-x1] Directional shadows toggled: %s" % str(directional_light.shadow_enabled))
+		_update_hud()
+
 func _process(delta: float) -> void:
 	if is_headless:
 		return
@@ -154,7 +185,23 @@ func _process(delta: float) -> void:
 		target_marker.scale = target_marker.scale.lerp(Vector3.ONE, delta * 8.0)
 		target_marker.rotate_y(delta * 2.5)
 
-	_update_hud()
+	# Frame time calculation (smoothed every 0.2s for clean readability)
+	frame_time_acc += delta
+	frame_time_count += 1
+	var now = Time.get_ticks_msec() / 1000.0
+	if now - last_fps_update_time >= 0.2:
+		if frame_time_count > 0:
+			current_frame_time_ms = (frame_time_acc / float(frame_time_count)) * 1000.0
+		frame_time_acc = 0.0
+		frame_time_count = 0
+		last_fps_update_time = now
+
+		if OS.has_feature("web"):
+			var raf_val = JavaScriptBridge.eval("window._gamex1_raf ? window._gamex1_raf.fps : 0")
+			if raf_val != null:
+				cached_raf_hz = int(raf_val)
+
+		_update_hud()
 
 func _update_hud() -> void:
 	if not fps_label or not hero:
@@ -162,11 +209,24 @@ func _update_hud() -> void:
 	var h_vel = Vector2(hero.velocity.x, hero.velocity.z).length()
 	var cam_mode = camera_controller.get_mode_name() if camera_controller else "Unknown"
 	var cam_zoom = camera_controller.current_distance if camera_controller else 13.5
-	fps_label.text = "FPS: %d | Hero: (%.1f, %.1f) | Speed: %.1f m/s | Cam: [%s] | Zoom: %.1fm" % [
+	var draw_calls = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+	var prims = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+	var shadow_str = "ON" if (directional_light and directional_light.shadow_enabled) else "OFF"
+	var raf_str = " | Browser RAF: %d Hz" % cached_raf_hz if OS.has_feature("web") else ""
+
+	fps_label.text = "FPS: %d (%.1f ms)%s | DrawCalls: %d | Primitives: %d | Shadows: [%s] (F1 toggle)" % [
 		Engine.get_frames_per_second(),
+		current_frame_time_ms,
+		raf_str,
+		draw_calls,
+		prims,
+		shadow_str
+	]
+	info_label.text = "game-x1 | Hero: (%.1f, %.1f) | Speed: %.1f m/s | Cam: [%s] | Zoom: %.1fm" % [
 		hero.global_position.x,
 		hero.global_position.z,
 		h_vel,
 		cam_mode,
 		cam_zoom
 	]
+	help_label.text = "Right Click: Move | Edge Pan / MMB Drag: Move Cam | Space (Hold): Center | Y: Lock | Scroll: Zoom | F1: Toggle Shadows"

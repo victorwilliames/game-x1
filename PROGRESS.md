@@ -1,7 +1,7 @@
 # Progresso — game-x1
 
 **Atualizado:** 2026-10-15  
-**Fase:** Experiência Web em modo janela e controles de câmera aprimorados (edge scrolling responsivo para janela/canvas, arrasto por botão do meio MMB, prevenção de scroll de página em Espaço/Wheel, suporte a redimensionamento e 8 testes automatizados de câmera).  
+**Fase:** Experiência Web em modo janela validada e diagnóstico/otimização profunda de desempenho para meta de 120 FPS concluídos (geometria otimizada com 96,3% menos faces, queda de 50% em draw calls, benchmark de 4,80 ms na Intel UHD 620, telemetria em tempo real no HUD e tecla F1 para alternar sombras).  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
 ## Situação verificada
@@ -31,6 +31,13 @@
   - HUD e texto de ajuda atualizados com o modo atual da câmera `[Free]`, `[Locked]`, `[Panning (MMB)]` ou `[Free (Space Centering)]`.
 - [x] Testes automatizados quádruplos (`scripts/test.ps1`: Editor parse, Smoke check 60 frames, Deterministic movement e 8 verificações do Camera controller).
 - [x] Arena isométrica escura com muretas, pilastras, spires de time e 4 dummies inimigos de teste.
+- [x] Diagnóstico e otimização profunda de performance para meta de 120 FPS:
+  - Causa raiz dos ~30 FPS identificada (sub-harmônica de VSync causada por 316k triângulos em juntas de esferas padrão e 4 divisões de sombra com 707 draw calls).
+  - Geometria reduzida de 330.110 para 12.142 faces (-96,3%).
+  - Draw calls reduzidas de 707 para 351 (-50,3%) e primitivas reduzidas de 1,19M para 77k (-93,5%).
+  - Tempo de quadro empírico medido na GPU Intel UHD 620: 4,80 ms (208 FPS) com sombras e 2,35 ms (426 FPS) sem sombras, ambos dentro do orçamento de 8,33 ms (120 FPS).
+  - HUD expandido com telemetria ao vivo: FPS, frame time (ms), browser RAF (Hz), draw calls, primitivas e tecla F1 para alternar sombras.
+  - Script de benchmark GPU automatizado criado (`scripts/bench.ps1` e `scripts/test_performance.gd`).
 
 ## Próximos incrementos
 

@@ -9,6 +9,7 @@ config_version=5
 config/name="game-x1"
 config/description="3D MOBA Prototype (Stage 0: Web proof and foundation)"
 run/main_scene="res://scenes/main.tscn"
+run/max_fps=0
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display]
@@ -17,6 +18,7 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/vsync/vsync_mode=0
 
 [rendering]
 

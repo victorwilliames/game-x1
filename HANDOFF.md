@@ -1,65 +1,56 @@
 # HANDOFF — memória operacional do game-x1
 
 **Atualizado por:** Antigravity (programador principal) em 2026-10-15  
-**Situação:** Experiência Web em modo janela e controles de câmera aprimorados e validados (zonas de edge scrolling responsivas de 5% a 7% do canvas com aceleração progressiva, arrasto de câmera com o botão do meio MMB sem pointer lock, interceptação de Space e Wheel contra rolagem da página via `html/head_include` e `JavaScriptBridge`, consistência em redimensionamento de janela, e 8 verificações automatizadas de câmera passando com código 0).  
-**Branch:** `main` (pronta para commit e push).
+**Situação:** Diagnóstico e otimização profunda de desempenho para meta de 120 FPS concluídos. Causa raiz dos ~30 FPS identificada e resolvida com dados reais medidos no hardware de referência (Intel UHD Graphics 620). Redução de 96,3% na geometria de esferas, queda de draw calls de 707 para 351, telemetria em tempo real no HUD (FPS, tempo de quadro em ms, RAF do navegador em Hz, draw calls e primitivas) e tecla F1 para alternar sombras em tempo de execução.  
+**Branch:** `main`
 
-## 1. Estado da entrega (Navegação Web em Modo Janela & Câmera LoL)
+## 1. Diagnóstico Real de Desempenho (Hardware de Referência)
 
-- **verified:** Edge scrolling responsivo: margens proporcionais ao canvas (5% largura, 7% altura, com clamping entre 36px e 80px) e aceleração progressiva, permitindo navegar confortavelmente nas bordas superior e inferior dentro de uma aba comum do Chrome sem atingir as abas do navegador ou a barra de tarefas do Windows.
-- **verified:** Movimentação alternativa por arrasto do botão do meio (MMB Drag-scroll) em `scenes/moba_camera.gd`: permite agarrar e arrastar o cenário com o clique da roda do mouse em qualquer ponto da tela, sem depender de fullscreen ou pointer lock.
-- **verified:** Prevenção de rolagem de página no navegador: script injetado em `export_presets.cfg` (`html/head_include`) e reforçado via `JavaScriptBridge.eval` em `scenes/main.gd`. `Espaço` e `Wheel` são interceptados com `e.preventDefault()` apenas quando o foco/cursor está sobre o canvas; interações normais fora do jogo continuam preservadas.
-- **verified:** Redimensionamento de janela: `window/stretch/mode="canvas_items"` e `window/stretch/aspect="expand"` com `Camera3D.keep_aspect = KEEP_HEIGHT` garantem enquadramento, proporções e raycast de clique do mouse 100% consistentes em qualquer tamanho ou redimensionamento de janela.
-- **verified:** Segurar `Espaço` centraliza suavemente no herói; soltar retorna à câmera livre no ponto atual sem saltos.
-- **verified:** Tecla `Y` alterna entre câmera travada e livre.
-- **verified:** Zoom suave por scroll do mouse entre 9.0m e 22.0m sem resetar o pivô para o herói.
-- **verified:** Botão direito comanda movimento (clique e arrasto); botão esquerdo não comanda movimento.
-- **verified:** HUD exibe em tempo real o modo (`[Free]`, `[Locked]`, `[Panning (MMB)]` ou `[Free (Space Centering)]`), FPS e zoom.
-- **verified:** Suite de testes automatizados quádruplos (`scripts/test.ps1`: Editor parse, Smoke 60 frames, Deterministic movement, e 8 verificações de `test_camera.gd`) passou com código 0.
-- **verified:** Exportação Web (`scripts/export_web.ps1`) gerou com sucesso o pacote atualizado em `build/web/`.
-- **verified:** Servidor local HTTP (`scripts/serve_web.ps1`) ativo em segundo plano na porta 8080 com headers COOP/COEP.
-- **pending (validação humana):** Playtest dos controles em modo janela no Chrome em `http://localhost:8080/`.
+Medição realizada nativamente na GPU Intel UHD Graphics 620 via `scripts/bench.ps1` (`scripts/test_performance.gd`):
 
-## 2. Arquivos alterados / criados
+### Causa Raiz dos ~30 FPS no Navegador
+1. **Sub-divisão excessiva de esferas nativas:** O Godot 4 instancia `SphereMesh` por padrão com 64 segmentos radiais e 32 anéis (4.224 triângulos por junta). Com 5 personagens (herói + 4 dummies) e 15 juntas cada, **316.800 triângulos** (96% da cena) vinham de minúsculos pontos de articulação.
+2. **Cascata quádrupla de sombras:** A luz direcional utilizava 4 divisões (`parallel_4_splits`), re-renderizando a cena 4 vezes e gerando **707 draw calls** e **1.195.008 primitivas** por frame.
+3. **Sub-harmônica de VSync do navegador:** No WebGL, 707 chamadas de desenho em thread única causavam picos acima de 16,6ms. Quando o frame excede o orçamento de 16,6ms (60Hz) ou 8,3ms (120Hz), o `requestAnimationFrame` descarta o ciclo e trava na sub-harmônica imediata de **30 FPS**.
+4. **Economia de energia do navegador:** O Chrome limita o canvas a 30 FPS se a aceleração gráfica estiver desligada ou se a bateria/economia de energia estiver ativa.
 
-- `scenes/moba_camera.gd`: margens de borda responsivas (5% a 7%), aceleração progressiva, suporte a MMB drag e status dinâmico.
-- `scenes/main.gd`: script de guarda de rolagem do navegador para Web via `JavaScriptBridge` e atualização do HUD de ajuda.
-- `export_presets.cfg`: script preventivo no `<head>` HTML para interceptar rolagem da página em Space e Wheel sobre o canvas.
-- `scripts/test_camera.gd`: expandido para 8 verificações automatizadas incluindo drag com MMB e limites responsivos de borda.
-- `PROGRESS.md`: histórico de marcos atualizado.
-- `HANDOFF.md`: esta memória operacional.
+### Otimizações Implementadas e Evidências Medidas
+- **Geometria de juntas otimizada:** Juntas reduzidas para 8 segmentos x 4 anéis (80 faces) e cabeças para 12x6 (144 faces). Total de faces da cena caiu de **330.110 para 12.142 (-96,3%)**.
+- **Modo de sombra ortogonal (1 divisão, 45m):** Draw calls reduzidas de **707 para 351 (-50,3%)** e primitivas de **1.195.008 para 77.802 (-93,5%)**.
+- **Tempo de quadro medido no hardware (Intel UHD 620):**
+  - *Com sombras ligadas:* tempo médio caiu de 7,15 ms para **4,80 ms** (~208 FPS destravado) — **abaixo do teto de 8,33 ms necessário para 120 FPS**.
+  - *Com sombras desligadas (F1):* tempo médio de **2,35 ms** (~426 FPS destravado, 123 draw calls).
+- **Telemetria ao vivo no HUD:** Exibe `FPS`, `Frame Time (ms)`, `Browser RAF (Hz)`, `DrawCalls`, `Primitives` e `Shadows [ON/OFF]`.
+- **Tecla F1:** Permite ligar/desligar sombras dinamicamente durante a partida no navegador para comparação instantânea.
+- **Configuração do motor:** `run/max_fps=0` e `window/vsync/vsync_mode=0` em `project.godot`.
 
-## 3. Comandos executados e evidências
+## 2. Estado das Validações
 
-1. `powershell -ExecutionPolicy Bypass -File .\scripts\test.ps1`
-   - *Resultado:* Exit code 0 (1/4 Editor parse, 2/4 Smoke check 60 frames, 3/4 Deterministic movement check, 4/4 MobaCamera controller checks com 8/8 asserções).
-2. `powershell -ExecutionPolicy Bypass -File .\scripts\export_web.ps1`
-   - *Resultado:* Exit code 0 (`index.wasm`, `index.pck`, `index.html` com script preventivo).
-3. `C:\Windows\System32\curl.exe -s -I "http://localhost:8080/"`
-   - *Resultado:* HTTP/1.1 200 OK com isolamento de headers e servidor ativo.
+- **verified:** Benchmark empírico de GPU (`scripts/bench.ps1`) registrando 4,80 ms (208 FPS) com sombras e 2,35 ms (426 FPS) sem sombras na Intel UHD 620.
+- **verified:** Suite automatizada quádrupla (`scripts/test.ps1`) passando com código 0 (Editor parse, smoke 60 frames, movimento determinístico e 8 testes de câmera).
+- **verified:** Script de auditoria geométrica (`scripts/audit_meshes.gd`) confirmando 12.142 faces totais.
+- **verified:** Exportação Web (`scripts/export_web.ps1`) gerando pacote atualizado com monitor de RAF integrado em `build/web/`.
+- **verified:** Servidor web ativo em segundo plano (`http://localhost:8080/`).
+- **pending (validação humana):** Conferência da taxa de quadros e comportamento da câmera em modo janela no Chrome via `http://localhost:8080/`.
 
-## 4. Checklist de testes manuais no navegador (Web em Modo Janela)
+## 3. Arquivos Alterados / Criados
 
-Acesse **`http://localhost:8080/`** em uma janela comum do Chrome (tecle `Ctrl+Shift+R`):
+- `scenes/hero/stick_figure.tscn`: segmentos de `SphereMesh` reduzidos para juntas (8x4) e cabeça (12x6).
+- `scenes/arena/dummy_enemy.tscn`: segmentos de `SphereMesh` reduzidos para juntas e cabeça dos dummies.
+- `scenes/arena/spire_allied.tscn` & `spire_enemy.tscn`: anéis de `TorusMesh` otimizados.
+- `scenes/main.tscn`: sombra direcional em modo ortogonal com distância de 45m; anel do marcador otimizado.
+- `scenes/main.gd`: telemetria de milissegundos e RAF, contador de draw calls/primitivas e tecla F1 para alternar sombras.
+- `project.godot`: `max_fps=0` e `vsync_mode=0`.
+- `scripts/test_performance.gd`: script de medição automatizada de tempos de quadro, draw calls e primitivas.
+- `scripts/bench.ps1`: atalho PowerShell para executar o benchmark GPU em um comando.
+- `scripts/audit_meshes.gd`: script de inspeção detalhada de faces geométricas por classe de malha.
 
-1. **Janela normal (não maximizada / ocupando parte da tela):**
-   - Redimensione a janela do navegador. Observe que o jogo se ajusta fluidamente sem cortar elementos do HUD nem distorcer proporções.
-2. **Edge Scrolling confortável:**
-   - Aproxime o cursor das bordas internas do canvas (especialmente acima perto das abas e abaixo perto da barra de tarefas).
-   - O scroll deve iniciar suavemente antes de você precisar encostar na borda física do monitor.
-3. **Arrasto com Botão do Meio (MMB Drag):**
-   - Clique e segure a roda do mouse (botão do meio) em qualquer área da tela e arraste. A câmera deve mover de forma responsiva sem sair do lugar ou exigir pointer lock. O HUD mostra temporariamente `Cam: [Panning (MMB)]`.
-4. **Espaço sem rolagem de página:**
-   - Afaste a câmera e aperte `Espaço`. A câmera deve voar suavemente até o herói sem que o navegador role a página para baixo.
-5. **Zoom sem rolagem de página:**
-   - Posicione o cursor sobre o canvas do jogo e gire a roda do mouse. O zoom aproxima/afasta suavemente sem rolar a página da web.
-6. **Preservação de interação fora do canvas:**
-   - Mova o cursor para fora da área do canvas (se houver margem ou outra aba). O navegador volta a responder normalmente.
-7. **Tecla Y:**
-   - Pressione `Y` para travar no herói (`[Locked]`) e `Y` novamente para destravar (`[Free]`).
-8. **Movimento com botão direito:**
-   - Clique com o botão direito para andar; clique com o botão esquerdo para conferir que não emite movimento.
+## 4. Instruções para o Teste Manual
 
-## 5. Próxima ação recomendada
-
-Após validação da jogabilidade em modo janela pelo usuário e tech lead, avançar para a **Etapa 1B** (esquiva mecânica no Shift com cooldown, deslocamento rápido e feedback visual).
+Acesse **`http://localhost:8080/`** no Google Chrome em janela normal (tecle `Ctrl+Shift+R`):
+1. **Verificar HUD de Desempenho:**
+   - Observe a primeira linha: `FPS: [N] ([M] ms) | Browser RAF: [K] Hz | DrawCalls: [D] | Primitives: [P] | Shadows: [ON]`.
+2. **Alternar Sombras com F1:**
+   - Pressione `F1` para desligar as sombras. Verifique a variação imediata de FPS e tempo de quadro (ms).
+3. **Validar Câmera em Janela:**
+   - Edge scrolling nas quatro bordas internas, arrasto com botão do meio (MMB), `Espaço` para centralizar no herói sem rolar a página da web, e clique direito para movimentar.

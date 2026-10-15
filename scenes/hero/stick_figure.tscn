@@ -17,11 +17,15 @@ roughness = 0.5
 material = SubResource("Mat_Joint")
 radius = 0.075
 height = 0.15
+radial_segments = 8
+rings = 4
 
 [sub_resource type="SphereMesh" id="Mesh_Head"]
 material = SubResource("Mat_Joint")
 radius = 0.18
 height = 0.36
+radial_segments = 12
+rings = 6
 
 [sub_resource type="BoxMesh" id="Mesh_EyeMarker"]
 material = SubResource("Mat_Bone")
