@@ -15,6 +15,18 @@ class DamageItem:
 
 var items: Array[DamageItem] = []
 var camera: Camera3D = null
+var font: Font = null
+
+func _init() -> void:
+	if ResourceLoader.exists("res://assets/fonts/Outfit-Variable.ttf"):
+		var f := load("res://assets/fonts/Outfit-Variable.ttf") as FontFile
+		if f:
+			var sys_font := SystemFont.new()
+			sys_font.font_names = PackedStringArray(["Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", "sans-serif"])
+			f.fallbacks = [sys_font]
+			font = f
+	if not font:
+		font = ThemeDB.fallback_font
 
 func setup(p_camera: Camera3D) -> void:
 	camera = p_camera
@@ -49,7 +61,7 @@ func _draw() -> void:
 	if not camera or not is_instance_valid(camera):
 		return
 
-	var font := ThemeDB.fallback_font
+	var active_font := font if font else ThemeDB.fallback_font
 
 	for item in items:
 		var world_pt := item.pos_3d + Vector3(item.x_offset, 1.8 + item.y_offset, 0.0)
@@ -62,8 +74,8 @@ func _draw() -> void:
 		var col := Color(1.0, 0.2, 0.0, alpha) if item.is_crit else Color(1.0, 0.62, 0.0, alpha) # #ff3300 or #ff9f00
 		var outline_col := Color(0, 0, 0, alpha)
 
-		var text_sz := font.get_string_size(item.text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_sz)
+		var text_sz := active_font.get_string_size(item.text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_sz)
 		var draw_pos := Vector2(screen_pt.x - text_sz.x * 0.5, screen_pt.y + text_sz.y * 0.3)
 
-		draw_string_outline(font, draw_pos, item.text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_sz, 6, outline_col)
-		draw_string(font, draw_pos, item.text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_sz, col)
+		draw_string_outline(active_font, draw_pos, item.text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_sz, 6, outline_col)
+		draw_string(active_font, draw_pos, item.text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_sz, col)

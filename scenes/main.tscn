@@ -1,61 +1,50 @@
 [gd_scene format=3 uid="uid://b7vyk4mfl8y2s"]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
-[ext_resource type="Shader" path="res://scenes/arena_grid.gdshader" id="2_grid"]
+[ext_resource type="Script" path="res://scenes/arena/grid_helper.gd" id="2_grid_helper"]
 [ext_resource type="PackedScene" uid="uid://dmckv8s7qpl1n" path="res://scenes/hero/hero.tscn" id="3_hero"]
 [ext_resource type="PackedScene" uid="uid://c67uqv263s28p" path="res://scenes/arena/dummy.tscn" id="4_dummy"]
 [ext_resource type="PackedScene" uid="uid://cyf38glfi2454" path="res://assets/ui/rts-target/pointTarget.glb" id="5_point_target"]
 [ext_resource type="Script" path="res://scenes/moba_camera.gd" id="6_moba_camera"]
 [ext_resource type="Script" path="res://scenes/ui/floating_bars.gd" id="7_floating_bars"]
 [ext_resource type="Script" path="res://scenes/ui/floating_damage.gd" id="8_floating_damage"]
+[ext_resource type="PackedScene" uid="uid://df67p8mq2k1s1" path="res://scenes/ui/status_hud.tscn" id="9_status_hud"]
+[ext_resource type="Script" path="res://scenes/ui/fullscreen_button.gd" id="10_fullscreen_button"]
 
 [sub_resource type="Environment" id="Environment_world"]
 background_mode = 1
-background_color = Color(0.0118, 0.0275, 0.0471, 1)
+background_color = Color(0.0117647, 0.027451, 0.0470588, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.0706, 0.1059, 0.149, 1)
+ambient_light_color = Color(0.0705882, 0.105882, 0.14902, 1)
 ambient_light_energy = 1.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ground"]
-render_priority = 0
-shader = ExtResource("2_grid")
-shader_parameter/bg_color = Color(0.0392, 0.0627, 0.0863, 1)
-shader_parameter/grid_secondary = Color(0.0863, 0.1569, 0.2196, 1)
-shader_parameter/grid_primary = Color(0.7608, 0.6157, 0.3255, 1)
-shader_parameter/grid_size = 2.0
-shader_parameter/line_thickness = 0.03
-shader_parameter/axis_thickness = 0.045
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.0392157, 0.0627451, 0.0862745, 1)
+metallic = 0.1
+roughness = 0.8
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
-material = SubResource("ShaderMaterial_ground")
+material = SubResource("StandardMaterial3D_floor")
 size = Vector2(80, 80)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
 size = Vector3(80, 0.2, 80)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_range"]
-transparency = 1
-shading_mode = 0
-albedo_color = Color(0, 1, 0.533333, 0.08)
-
-[sub_resource type="TorusMesh" id="TorusMesh_range"]
-material = SubResource("StandardMaterial3D_range")
-inner_radius = 17.92
-outer_radius = 18.08
-rings = 64
-ring_segments = 3
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_target"]
-transparency = 1
-shading_mode = 0
-albedo_color = Color(1, 0.231373, 0.188235, 0.7)
-
-[sub_resource type="TorusMesh" id="TorusMesh_target"]
-material = SubResource("StandardMaterial3D_target")
-inner_radius = 0.75
-outer_radius = 0.95
-rings = 32
-ring_segments = 3
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_debug"]
+bg_color = Color(0.0235294, 0.0470588, 0.0745098, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.760784, 0.615686, 0.32549, 0.4)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -84,6 +73,10 @@ mesh = SubResource("PlaneMesh_ground")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 shape = SubResource("BoxShape3D_ground")
 
+[node name="GridHelper" type="MeshInstance3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+script = ExtResource("2_grid_helper")
+
 [node name="Dummies" type="Node3D" parent="."]
 
 [node name="DummyStatic" parent="Dummies" instance=ExtResource("4_dummy")]
@@ -111,14 +104,12 @@ fov = 38.0
 
 [node name="RangeIndicator" type="MeshInstance3D" parent="Effects"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
-mesh = SubResource("TorusMesh_range")
 
 [node name="TargetMarker" type="Node3D" parent="Effects"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
 visible = false
 
 [node name="MarkerMesh" type="MeshInstance3D" parent="Effects/TargetMarker"]
-mesh = SubResource("TorusMesh_target")
 
 [node name="ClickIndicator" parent="Effects" instance=ExtResource("5_point_target")]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0.05, 0)
@@ -146,30 +137,31 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("8_floating_damage")
 
-[node name="MarginContainer" type="MarginContainer" parent="UI"]
-anchors_preset = 15
+[node name="StatusHUD" parent="UI" instance=ExtResource("9_status_hud")]
+
+[node name="FullscreenButton" type="Button" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
 anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = -62.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 62.0
+grow_horizontal = 0
+mouse_filter = 1
+script = ExtResource("10_fullscreen_button")
+
+[node name="DebugPanel" type="PanelContainer" parent="UI"]
+visible = false
+offset_left = 20.0
+offset_top = 240.0
+offset_right = 440.0
+offset_bottom = 330.0
 mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_styles/panel = SubResource("StyleBoxFlat_debug")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="UI/MarginContainer"]
+[node name="TelemetryLabel" type="Label" parent="UI/DebugPanel"]
 layout_mode = 2
-mouse_filter = 2
-
-[node name="FPSLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "FPS: --"
-
-[node name="InfoLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "game-x0-moba (Godot 4 Port)"
-
-[node name="HelpLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Right Click: Move | Left Click / [X]: Smart Attack | [A]: Attack Move | [Space]: Center | [Y]: Lock Cam"
+theme_override_colors/font_color = Color(0.627451, 0.666667, 0.709804, 1)
+theme_override_font_sizes/font_size = 11
+text = "Telemetry Debug (F3 toggle)"

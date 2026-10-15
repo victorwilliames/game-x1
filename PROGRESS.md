@@ -26,12 +26,20 @@
   - Dummies (`scenes/arena/dummy.tscn`): Estático em `(7, 0, 7)` e Móvel em `(-7, 0, 7)` oscilando $\pm 8$ m na velocidade 2.5 m/s, 600 HP, círculo de tolerância roxo de 3.0 m, outline vermelho grosso no hover/seleção, flash de dano branco e respawn em 3.0s.
   - Sistema de Alvo (`scripts/targeting_system.gd`): prioriza dummy próximo ao mouse (raio 5.0 m) ou dummy mais próximo à Caitlyn (18.0 m).
 - [x] **Fase 5 — Interface Flutuante e HUD 1:1:**
-  - Placa do Jogador LoL (`scenes/ui/floating_bars.gd`): projetada acima da cabeça ($y+5.2$), texto "Caitlyn", "1072 / 1072 (100%)" em ciano `#00ffcc`, caixa de nível "5" com borda dourada, barra de vida verde com 10 ticks de 100 HP e barra de mana azul.
+  - Placa do Jogador LoL (`scenes/ui/floating_bars.gd`): projetada acima da cabeça ($y+6.1$), texto "Caitlyn", "1072 / 1072 (100%)" em ciano `#00ffcc`, caixa de nível "5" com borda dourada, barra de vida verde com 10 ticks de 100 HP e barra de mana azul.
   - Barra de Vida dos Dummies: moldura dourada `#c29d53`, barra vermelha com ticks de 100 HP e texto quantitativo.
   - Números de Dano Flutuantes (`scenes/ui/floating_damage.gd`): 26px laranja bold (55) ou 34px vermelho bold com "!" (96 crit, 25% de chance), contorno preto espesso, flutuando a 3.2 u/s durante 0.8s.
-  - Indicador de alcance circular (raio 18.0) verde (opacidade 0.08) ou rosa/vermelho (0.35) no modo Attack Move (tecla A).
+  - Indicador de alcance circular (raio 18.0) verde (opacidade 0.12) ou rosa/vermelho (0.35) no modo Attack Move (tecla A).
   - Marcador de alvo selecionado vermelho pulsante.
   - Indicador de clique verde animado com `pointTarget.glb` que gira e reduz de escala em 0.35s.
+- [x] **Fase 6 — Correção Visual Obrigatória e Paridade 1:1 com Anexo 2:**
+  - Piso PBR e MobaGridHelper: remoção do shader procedural com linhas grossas (`arena_grid.gdshader`); piso padrão `#0a1016` recebendo sombras e grade com linhas de 1 pixel idênticas ao `gl.LINES` do Three.js (eixos centrais dourados `#c29d53` e células `#162838`).
+  - Card de status `#status-hud`: card escuro translúcido com borda dourada, cantos arredondados, fonte `Outfit` com pesos médio/negrito e ícones fiéis para mouse e teclado.
+  - Botão de Tela Cheia circular Hextech: 42x42px dourado no canto superior direito.
+  - Indicadores em anel 2D plano (`scripts/ring_mesh_builder.gd`): substituição dos `TorusMesh` volumétricos por anéis planos 2D sem espessura no piso.
+  - Alinhamento das barras de vida flutuantes e contornos de 1px sem borrar as fontes.
+  - Telemetria de debug movida para overlay opcional acionável por `F3`.
+  - Capturas e composições lado a lado geradas em `docs/migration/visual/` (`A_three_baseline.png`, `B_godot_corrected.png`, `C_comparison_side_by_side.png`, `D_hud_detail.png`, `E_grid_detail.png`).
 - [x] **Validação Automatizada Quíntupla (`scripts/test.ps1`):**
   - 1/5: Import & parse do editor headless.
   - 2/5: Smoke check de 60 frames.

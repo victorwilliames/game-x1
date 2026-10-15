@@ -22,9 +22,9 @@ const PLAYABLE_MAX_Z: float = 38.0
 
 @onready var floating_bars: FloatingBars = $UI/FloatingBars
 @onready var floating_damage: FloatingDamage = $UI/FloatingDamage
-@onready var fps_label: Label = $UI/MarginContainer/VBoxContainer/FPSLabel
-@onready var info_label: Label = $UI/MarginContainer/VBoxContainer/InfoLabel
-@onready var help_label: Label = $UI/MarginContainer/VBoxContainer/HelpLabel
+@onready var status_hud: StatusHUD = $UI/StatusHUD
+@onready var debug_panel: PanelContainer = $UI/DebugPanel
+@onready var telemetry_label: Label = $UI/DebugPanel/TelemetryLabel
 
 const PROJECTILE_SCENE = preload("res://scenes/combat/projectile.tscn")
 
@@ -83,13 +83,15 @@ func _ready() -> void:
 	if floating_damage and cam:
 		floating_damage.setup(cam)
 
-	# Setup Range Indicator Material
-	if range_indicator:
+	# Setup Range Indicator (Flat 2D ring matching THREE.RingGeometry)
+	if range_indicator and hero:
+		var r_mesh = RingMeshBuilder.create_ring_mesh(hero.attack_range - 0.08, hero.attack_range + 0.08, 64)
+		range_indicator.mesh = r_mesh
 		range_mat = StandardMaterial3D.new()
 		range_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		range_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		range_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		range_mat.albedo_color = Color(0, 1, 0.533, 0.08) # #00ff88
+		range_mat.albedo_color = Color(0, 1, 0.533, 0.12) # #00ff88, opacity 0.12
 		range_indicator.material_override = range_mat
 
 	# Setup PointTarget material
@@ -103,15 +105,26 @@ func _ready() -> void:
 			mesh_inst.material_override = green_mat
 		click_indicator.visible = false
 
+	# Setup Target Marker (Flat 2D red ring matching THREE.RingGeometry(0.75, 0.95, 32))
 	if target_marker:
+		var marker_mesh_node = target_marker.get_node_or_null("MarkerMesh") as MeshInstance3D
+		if marker_mesh_node:
+			marker_mesh_node.mesh = RingMeshBuilder.create_ring_mesh(0.75, 0.95, 32)
+			var marker_mat = StandardMaterial3D.new()
+			marker_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			marker_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			marker_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+			marker_mat.albedo_color = Color(1.0, 0.231, 0.188, 0.7) # #ff3b30
+			marker_mesh_node.material_override = marker_mat
 		target_marker.visible = false
 
 	if not is_headless:
-		var renderer_name = ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown")
-		info_label.text = "game-x0-moba (Godot 4 Port) | Renderer: %s" % renderer_name
-		help_label.text = "Right Click: Move/Target | Left Click: Smart Attack | [A]: Attack Move | [X]: Shoot | [Space]: Center | [Y]: Lock Cam"
+		if status_hud:
+			status_hud.set_status("Pronto!")
+			status_hud.set_fps(Engine.get_frames_per_second())
 		if OS.has_feature("web"):
 			_install_web_scroll_preventer()
+			JavaScriptBridge.eval("window._gamex1_ready = true;")
 
 	print("[game-x1] Main 1:1 scene ready. Platform: %s, Headless: %s" % [OS.get_name(), str(is_headless)])
 
@@ -158,10 +171,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_headless or not hero:
 		return
 
-	# F1 toggles real-time shadows
+	# F1 toggles real-time shadows, F3 toggles telemetry debug panel
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F1:
 			_toggle_shadows()
+			return
+		elif event.keycode == KEY_F3:
+			if debug_panel:
+				debug_panel.visible = not debug_panel.visible
+				_update_hud()
 			return
 		elif event.keycode == KEY_A:
 			is_attack_move_mode = true
@@ -392,7 +410,7 @@ func _process(delta: float) -> void:
 			if is_attack_move_mode:
 				range_mat.albedo_color = Color(1.0, 0.0, 0.33, 0.35) # #ff0055
 			else:
-				range_mat.albedo_color = Color(0.0, 1.0, 0.533, 0.08) # #00ff88
+				range_mat.albedo_color = Color(0.0, 1.0, 0.533, 0.12) # #00ff88
 
 	# 5. Update Target Marker on selected dummy
 	if target_marker:
@@ -484,35 +502,33 @@ func _update_telemetry(delta: float) -> void:
 		_update_hud()
 
 func _update_hud() -> void:
-	if not fps_label or not hero:
-		return
-	var h_vel = Vector2(hero.velocity.x, hero.velocity.z).length()
-	var cam_mode = camera_controller.get_mode_name() if camera_controller else "Unknown"
-	var cam_zoom = camera_controller.current_distance if camera_controller else 13.5
-	var draw_calls = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
-	var prims = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
-	var shadow_str = "ON" if (directional_light and directional_light.shadow_enabled) else "OFF"
-	var raf_str = " | Browser RAF: %d Hz" % cached_raf_hz if OS.has_feature("web") else ""
+	if status_hud:
+		status_hud.set_fps(Engine.get_frames_per_second())
 
-	fps_label.text = "FPS: %d (%.1f ms)%s | DrawCalls: %d | Primitives: %d | Shadows: [%s] (F1 toggle)" % [
-		Engine.get_frames_per_second(),
-		current_frame_time_ms,
-		raf_str,
-		draw_calls,
-		prims,
-		shadow_str
-	]
-	info_label.text = "Caitlyn: (%.1f, %.1f) | HP: %d/%d | AS: %.2f (+%d%%) | Speed: %.1f m/s | Cam: [%s]" % [
-		hero.global_position.x,
-		hero.global_position.z,
-		roundi(hero.hp),
-		roundi(hero.max_hp),
-		hero.attack_speed * (1.0 + hero.attack_speed_bonus),
-		roundi(hero.attack_speed_bonus * 100.0),
-		h_vel,
-		cam_mode
-	]
-	help_label.text = "Right Click: Move/Target | Left Click: Smart Attack | [A]: Attack Move | [X]: Shoot | [Space]: Center | [Y]: Lock Cam"
+	if debug_panel and debug_panel.visible and telemetry_label and hero:
+		var h_vel = Vector2(hero.velocity.x, hero.velocity.z).length()
+		var cam_mode = camera_controller.get_mode_name() if camera_controller else "Unknown"
+		var draw_calls = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+		var prims = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+		var shadow_str = "ON" if (directional_light and directional_light.shadow_enabled) else "OFF"
+		var raf_str = " | Browser RAF: %d Hz" % cached_raf_hz if OS.has_feature("web") else ""
+
+		telemetry_label.text = "FPS: %d (%.1f ms)%s | DrawCalls: %d | Prims: %d | Shadows: [%s] (F1)\nCaitlyn: (%.1f, %.1f) | HP: %d/%d | AS: %.2f (+%d%%) | Speed: %.1f m/s | Cam: [%s]" % [
+			Engine.get_frames_per_second(),
+			current_frame_time_ms,
+			raf_str,
+			draw_calls,
+			prims,
+			shadow_str,
+			hero.global_position.x,
+			hero.global_position.z,
+			roundi(hero.hp),
+			roundi(hero.max_hp),
+			hero.attack_speed * (1.0 + hero.attack_speed_bonus),
+			roundi(hero.attack_speed_bonus * 100.0),
+			h_vel,
+			cam_mode
+		]
 
 func _toggle_shadows() -> void:
 	if directional_light:
