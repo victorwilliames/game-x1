@@ -1,0 +1,102 @@
+[gd_scene load_steps=12 format=3 uid="uid://b2s5v9x7m4q1r"]
+
+[ext_resource type="Script" path="res://scenes/arena/spire_structure.gd" id="1_spire"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_base"]
+height = 2.5
+radius = 2.2
+
+[sub_resource type="StandardMaterial3D" id="Mat_BaseSlate"]
+albedo_color = Color(0.14, 0.17, 0.22, 1)
+roughness = 0.65
+
+[sub_resource type="CylinderMesh" id="Mesh_Tier1"]
+material = SubResource("Mat_BaseSlate")
+top_radius = 2.2
+bottom_radius = 2.4
+height = 0.35
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="Mesh_Tier2"]
+material = SubResource("Mat_BaseSlate")
+top_radius = 1.6
+bottom_radius = 1.8
+height = 0.45
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="Mesh_Pillar"]
+material = SubResource("Mat_BaseSlate")
+top_radius = 0.6
+bottom_radius = 0.7
+height = 1.5
+radial_segments = 8
+
+[sub_resource type="StandardMaterial3D" id="Mat_RedGlow"]
+albedo_color = Color(1, 0.2, 0.25, 1)
+roughness = 0.2
+emission_enabled = true
+emission = Color(1, 0.15, 0.2, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="BoxMesh" id="Mesh_AccentTrim"]
+material = SubResource("Mat_RedGlow")
+size = Vector3(0.12, 0.9, 0.12)
+
+[sub_resource type="PrismMesh" id="Mesh_CrystalTop"]
+material = SubResource("Mat_RedGlow")
+left_to_right = 0.5
+size = Vector3(0.7, 0.8, 0.7)
+
+[sub_resource type="TorusMesh" id="TorusMesh_CircuitRing"]
+material = SubResource("Mat_RedGlow")
+inner_radius = 3.0
+outer_radius = 3.12
+rings = 32
+
+[node name="SpireEnemy" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 3
+script = ExtResource("1_spire")
+is_enemy = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("CylinderShape3D_base")
+
+[node name="FloorRing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("TorusMesh_CircuitRing")
+
+[node name="Pedestal" type="Node3D" parent="."]
+
+[node name="Tier1" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
+mesh = SubResource("Mesh_Tier1")
+
+[node name="Tier2" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+mesh = SubResource("Mesh_Tier2")
+
+[node name="CenterPillar" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+mesh = SubResource("Mesh_Pillar")
+
+[node name="Trim1" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 1.4, 0)
+mesh = SubResource("Mesh_AccentTrim")
+
+[node name="Trim2" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 1.4, 0)
+mesh = SubResource("Mesh_AccentTrim")
+
+[node name="Trim3" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0.65)
+mesh = SubResource("Mesh_AccentTrim")
+
+[node name="Trim4" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, -0.65)
+mesh = SubResource("Mesh_AccentTrim")
+
+[node name="Crystal" type="MeshInstance3D" parent="Pedestal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0)
+mesh = SubResource("Mesh_CrystalTop")

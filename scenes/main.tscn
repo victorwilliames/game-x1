@@ -1,14 +1,18 @@
-[gd_scene load_steps=12 format=3 uid="uid://b7vyk4mfl8y2s"]
+[gd_scene load_steps=15 format=3 uid="uid://b7vyk4mfl8y2s"]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
 [ext_resource type="Shader" path="res://scenes/arena_grid.gdshader" id="2_grid"]
 [ext_resource type="PackedScene" uid="uid://dmckv8s7qpl1n" path="res://scenes/hero/hero.tscn" id="3_hero"]
+[ext_resource type="Script" path="res://scenes/arena/arena_walls.gd" id="4_walls"]
+[ext_resource type="PackedScene" uid="uid://c7w3px2mv8k9q" path="res://scenes/arena/spire_allied.tscn" id="5_spire_allied"]
+[ext_resource type="PackedScene" uid="uid://b2s5v9x7m4q1r" path="res://scenes/arena/spire_enemy.tscn" id="6_spire_enemy"]
+[ext_resource type="PackedScene" uid="uid://c3m7kd8w2qp5x" path="res://scenes/arena/dummy_enemy.tscn" id="7_dummy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
-sky_top_color = Color(0.35, 0.48, 0.65, 1)
-sky_horizon_color = Color(0.6, 0.68, 0.76, 1)
-ground_bottom_color = Color(0.15, 0.18, 0.22, 1)
-ground_horizon_color = Color(0.6, 0.68, 0.76, 1)
+sky_top_color = Color(0.12, 0.16, 0.22, 1)
+sky_horizon_color = Color(0.18, 0.23, 0.3, 1)
+ground_bottom_color = Color(0.08, 0.1, 0.14, 1)
+ground_horizon_color = Color(0.15, 0.18, 0.24, 1)
 
 [sub_resource type="Sky" id="Sky_env"]
 sky_material = SubResource("ProceduralSkyMaterial_sky")
@@ -17,23 +21,25 @@ sky_material = SubResource("ProceduralSkyMaterial_sky")
 background_mode = 2
 sky = SubResource("Sky_env")
 ambient_light_source = 3
-ambient_light_color = Color(0.85, 0.9, 0.95, 1)
+ambient_light_color = Color(0.82, 0.88, 0.95, 1)
 tonemap_mode = 2
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ground"]
 render_priority = 0
 shader = ExtResource("2_grid")
-shader_parameter/bg_color = Color(0.12, 0.15, 0.18, 1)
-shader_parameter/grid_color = Color(0.24, 0.32, 0.42, 1)
+shader_parameter/bg_color = Color(0.09, 0.12, 0.16, 1)
+shader_parameter/grid_color = Color(0.18, 0.24, 0.32, 1)
+shader_parameter/team_allied_tint = Color(0.06, 0.14, 0.2, 1)
+shader_parameter/team_enemy_tint = Color(0.16, 0.09, 0.11, 1)
 shader_parameter/grid_size = 2.0
-shader_parameter/line_thickness = 0.04
+shader_parameter/line_thickness = 0.025
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 material = SubResource("ShaderMaterial_ground")
-size = Vector2(80, 80)
+size = Vector2(14, 64)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
-size = Vector3(80, 0.2, 80)
+size = Vector3(14, 0.2, 64)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
 albedo_color = Color(0.1, 0.9, 0.6, 1)
@@ -59,6 +65,8 @@ shadow_enabled = true
 [node name="Arena" type="Node3D" parent="."]
 
 [node name="Ground" type="StaticBody3D" parent="Arena"]
+collision_layer = 1
+collision_mask = 2
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Arena/Ground"]
 mesh = SubResource("PlaneMesh_ground")
@@ -66,6 +74,29 @@ mesh = SubResource("PlaneMesh_ground")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Arena/Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 shape = SubResource("BoxShape3D_ground")
+
+[node name="Walls" type="Node3D" parent="Arena"]
+script = ExtResource("4_walls")
+
+[node name="SpireAllied" parent="Arena" instance=ExtResource("5_spire_allied")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 24)
+
+[node name="SpireEnemy" parent="Arena" instance=ExtResource("6_spire_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -24)
+
+[node name="Dummies" type="Node3D" parent="Arena"]
+
+[node name="Dummy1" parent="Arena/Dummies" instance=ExtResource("7_dummy")]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 1.8, 0, -5)
+
+[node name="Dummy2" parent="Arena/Dummies" instance=ExtResource("7_dummy")]
+transform = Transform3D(-0.984808, 0, -0.173648, 0, 1, 0, 0.173648, 0, -0.984808, -1.8, 0, -8)
+
+[node name="Dummy3" parent="Arena/Dummies" instance=ExtResource("7_dummy")]
+transform = Transform3D(-0.984808, 0, 0.173648, 0, 1, 0, -0.173648, 0, -0.984808, 2.2, 0, -12)
+
+[node name="Dummy4" parent="Arena/Dummies" instance=ExtResource("7_dummy")]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -1.5, 0, -15)
 
 [node name="TargetMarker" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
@@ -75,12 +106,14 @@ visible = false
 mesh = SubResource("TorusMesh_marker")
 
 [node name="Hero" parent="." instance=ExtResource("3_hero")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 16)
 
 [node name="CameraPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 16)
 
 [node name="Camera3D" type="Camera3D" parent="CameraPivot"]
-transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 16, 16)
-fov = 45.0
+transform = Transform3D(0.707107, -0.435779, 0.55667, 0, 0.788011, 0.615661, -0.707107, -0.435332, 0.557242, 9.54, 8.31, 9.54)
+fov = 40.0
 
 [node name="UI" type="CanvasLayer" parent="."]
 
@@ -102,11 +135,11 @@ size_flags_vertical = 0
 
 [node name="InfoLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "game-x1 | Stage 1A: Stick Figure Movement"
+text = "game-x1 | Combat Testing Lane"
 
 [node name="HelpLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Right Click on ground to move"
+text = "Right Click on lane to move | Scroll to zoom | Allied (Blue) vs Enemy (Red)"
 
 [node name="FPSLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
 layout_mode = 2

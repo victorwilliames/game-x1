@@ -1,7 +1,7 @@
 # Progresso — game-x1
 
 **Atualizado:** 2026-10-15  
-**Fase:** Etapa 1A implementada e validada via CLI e Web (boneco-palito 3D articulado, Idle/Run, movimentação por clique no chão e câmera suave); pronta para validação visual humana.  
+**Fase:** Etapa 1A refinada (arena isométrica estilo combat testing lane, muretas e pilastras com acentos de time, estruturas de base com cristais, anel de seleção do herói, 4 dummies inimigos, correção da Issue #2 de clique e overshoot, e teste determinístico headless).  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
 ## Situação verificada
@@ -15,9 +15,14 @@
 - [x] Prova visual inicial Web da Etapa 0 confirmada por captura no Chrome (60 FPS).
 - [x] Personagem 3D estilo boneco-palito articulado (`scenes/hero/stick_figure.tscn`) com juntas e membros nativos.
 - [x] Animações procedurais nativas de `Idle` (respiração) e `Run` (passadas e braços alternados) sincronizadas com a velocidade horizontal.
-- [x] Movimentação por clique direito no chão com `CharacterBody3D`, rotação coerente e parada no destino.
-- [x] Câmera inclinada seguindo o herói suavemente via `lerp`.
-- [x] Cenário com chão quadriculado de laboratório (`scenes/arena_grid.gdshader`) para percepção clara de escala e distância.
+- [x] Anel de seleção circular no chão sob os pés do herói (`SelectionRing`, ciano emissivo).
+- [x] Movimentação por clique no chão com raycast físico restrito à arena e sem overshoot (`step_speed = min(move_speed, distance / delta)`).
+- [x] Teste determinístico automatizado de movimentação e chegada precisa sem oscilação (`scripts/test_movement.gd` incluído no `scripts/test.ps1`).
+- [x] Câmera isométrica aproximada e configurável (yaw 45°, pitch 38°, zoom com scroll do mouse), valorizando o herói e a arena.
+- [x] Shader de chão de laboratório refinado com grid sutil, cruzes nos vértices, linha pontilhada central e gradiente suave de time.
+- [x] Limites da arena e muretas modulares com pilastras e acentos de iluminação de time (ciano no lado aliado, vermelho no lado inimigo).
+- [x] Estruturas de base com pedestal escalonado escuro e cristais flutuantes com rotação (ciano aliado / vermelho inimigo).
+- [x] Quatro dummies de teste inimigos vermelhos em postura de combate com barras de vida simples para referência de escala e composição.
 
 ## Próximos incrementos
 
@@ -31,6 +36,7 @@
 **1. Herói e movimentação**
 - [x] (1A) Boneco-palito 3D articulado com segmentos/juntas visíveis, Idle e Run (visual de desenvolvimento, sem arte final).
 - [x] (1A) Clique para mover com botão direito, rotação coerente e câmera acompanhando suavemente.
+- [x] (1A Refinada) Arena isométrica escura com muretas, pilastras, spires de time, 4 dummies inimigos, anel de seleção e resolução da Issue #2.
 - [ ] (1B) Esquiva (Shift) com animação, cooldown e colisão.
 
 **2. Combate básico**
@@ -55,4 +61,4 @@
 
 Registrar por incremento: commit, funcionalidade jogável, comando/teste executado, resultado, captura real (quando visual) e limitações. Não reportar aprovação estética sem playtest humano.
 
-**Próxima tarefa para o Antigravity:** Após validação humana do movimento do herói na Web, implementar a Etapa 1B (esquiva no Shift com recarga e rastro/feedback visual).
+**Próxima tarefa para o Antigravity:** Após validação humana da nova arena e movimentação no navegador, implementar a Etapa 1B (esquiva no Shift com recarga e rastro/feedback visual).

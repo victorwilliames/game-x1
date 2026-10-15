@@ -49,8 +49,10 @@ func _physics_process(delta: float) -> void:
 			emit_signal("move_target_reached")
 		else:
 			var dir = diff.normalized()
-			velocity.x = dir.x * move_speed
-			velocity.z = dir.z * move_speed
+			# Cap speed to remaining distance per frame to prevent any overshoot at any framerate
+			var step_speed = min(move_speed, distance / max(delta, 0.001))
+			velocity.x = dir.x * step_speed
+			velocity.z = dir.z * step_speed
 
 			# Rotate facing direction smoothly towards movement vector
 			var target_rot_y = atan2(dir.x, dir.z)

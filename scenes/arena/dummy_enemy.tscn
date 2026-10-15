@@ -1,0 +1,197 @@
+[gd_scene load_steps=13 format=3 uid="uid://c3m7kd8w2qp5x"]
+
+[ext_resource type="Script" path="res://scenes/arena/dummy_enemy.gd" id="1_dummy"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_dummy"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_EnemyJoint"]
+albedo_color = Color(1, 0.2, 0.3, 1)
+roughness = 0.3
+emission_enabled = true
+emission = Color(1, 0.15, 0.25, 1)
+emission_energy_multiplier = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_EnemyBone"]
+albedo_color = Color(0.95, 0.35, 0.45, 1)
+roughness = 0.45
+
+[sub_resource type="SphereMesh" id="Mesh_Joint"]
+material = SubResource("Mat_EnemyJoint")
+radius = 0.075
+height = 0.15
+
+[sub_resource type="SphereMesh" id="Mesh_Head"]
+material = SubResource("Mat_EnemyJoint")
+radius = 0.18
+height = 0.36
+
+[sub_resource type="CylinderMesh" id="Mesh_Spine"]
+material = SubResource("Mat_EnemyBone")
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.5
+
+[sub_resource type="CylinderMesh" id="Mesh_Limb"]
+material = SubResource("Mat_EnemyBone")
+top_radius = 0.035
+bottom_radius = 0.035
+height = 0.45
+
+[sub_resource type="StandardMaterial3D" id="Mat_BarBg"]
+shading_mode = 1
+albedo_color = Color(0.12, 0.14, 0.18, 0.95)
+
+[sub_resource type="BoxMesh" id="Mesh_BarBg"]
+material = SubResource("Mat_BarBg")
+size = Vector3(0.7, 0.07, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="Mat_BarFill"]
+shading_mode = 1
+albedo_color = Color(0.95, 0.22, 0.28, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_BarFill"]
+material = SubResource("Mat_BarFill")
+size = Vector3(0.66, 0.045, 0.025)
+
+[node name="DummyEnemy" type="StaticBody3D"]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_dummy")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_dummy")
+
+[node name="HealthBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 0)
+
+[node name="Bg" type="MeshInstance3D" parent="HealthBar"]
+mesh = SubResource("Mesh_BarBg")
+
+[node name="Fill" type="MeshInstance3D" parent="HealthBar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.005)
+mesh = SubResource("Mesh_BarFill")
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="HipsPivot" type="Node3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+
+[node name="HipsJoint" type="MeshInstance3D" parent="Visual/HipsPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="SpinePivot" type="Node3D" parent="Visual/HipsPivot"]
+
+[node name="SpineBone" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("Mesh_Spine")
+
+[node name="ChestPivot" type="Node3D" parent="Visual/HipsPivot/SpinePivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="ChestJoint" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="HeadPivot" type="Node3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32, 0)
+
+[node name="HeadMesh" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/HeadPivot"]
+mesh = SubResource("Mesh_Head")
+
+[node name="LeftShoulderPivot" type="Node3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0, 0)
+
+[node name="ShoulderJoint" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/LeftShoulderPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="UpperArmBone" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/LeftShoulderPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="LeftElbowPivot" type="Node3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/LeftShoulderPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+
+[node name="ElbowJoint" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/LeftShoulderPivot/LeftElbowPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="ForearmBone" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/LeftShoulderPivot/LeftElbowPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="LeftHandJoint" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/LeftShoulderPivot/LeftElbowPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+mesh = SubResource("Mesh_Joint")
+
+[node name="RightShoulderPivot" type="Node3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, 0, 0)
+
+[node name="ShoulderJoint" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/RightShoulderPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="UpperArmBone" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/RightShoulderPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="RightElbowPivot" type="Node3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/RightShoulderPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+
+[node name="ElbowJoint" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/RightShoulderPivot/RightElbowPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="ForearmBone" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/RightShoulderPivot/RightElbowPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="RightHandJoint" type="MeshInstance3D" parent="Visual/HipsPivot/SpinePivot/ChestPivot/RightShoulderPivot/RightElbowPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+mesh = SubResource("Mesh_Joint")
+
+[node name="LeftHipPivot" type="Node3D" parent="Visual/HipsPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0, 0)
+
+[node name="HipJoint" type="MeshInstance3D" parent="Visual/HipsPivot/LeftHipPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="UpperLegBone" type="MeshInstance3D" parent="Visual/HipsPivot/LeftHipPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="LeftKneePivot" type="Node3D" parent="Visual/HipsPivot/LeftHipPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.46, 0)
+
+[node name="KneeJoint" type="MeshInstance3D" parent="Visual/HipsPivot/LeftHipPivot/LeftKneePivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="LowerLegBone" type="MeshInstance3D" parent="Visual/HipsPivot/LeftHipPivot/LeftKneePivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="LeftFootJoint" type="MeshInstance3D" parent="Visual/HipsPivot/LeftHipPivot/LeftKneePivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.47, 0)
+mesh = SubResource("Mesh_Joint")
+
+[node name="RightHipPivot" type="Node3D" parent="Visual/HipsPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 0, 0)
+
+[node name="HipJoint" type="MeshInstance3D" parent="Visual/HipsPivot/RightHipPivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="UpperLegBone" type="MeshInstance3D" parent="Visual/HipsPivot/RightHipPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="RightKneePivot" type="Node3D" parent="Visual/HipsPivot/RightHipPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.46, 0)
+
+[node name="KneeJoint" type="MeshInstance3D" parent="Visual/HipsPivot/RightHipPivot/RightKneePivot"]
+mesh = SubResource("Mesh_Joint")
+
+[node name="LowerLegBone" type="MeshInstance3D" parent="Visual/HipsPivot/RightHipPivot/RightKneePivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.23, 0)
+mesh = SubResource("Mesh_Limb")
+
+[node name="RightFootJoint" type="MeshInstance3D" parent="Visual/HipsPivot/RightHipPivot/RightKneePivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.47, 0)
+mesh = SubResource("Mesh_Joint")
