@@ -1,44 +1,46 @@
-# Progresso — game-x1
+# Progresso — game-x1 (Port 1:1 game-x0-moba -> Godot 4)
 
 **Atualizado:** 2026-10-15  
-**Fase:** Experiência Web em modo janela validada e diagnóstico/otimização profunda de desempenho para meta de 120 FPS concluídos (geometria otimizada com 96,3% menos faces, queda de 50% em draw calls, benchmark de 4,80 ms na Intel UHD 620, telemetria em tempo real no HUD e tecla F1 para alternar sombras).  
+**Branch:** `port/game-x0-1to1`  
+**Fase:** Migração 1:1 de `game-x0-moba` para Godot 4. Personagem Caitlyn 3D (`CaitlynComplete.glb`), Dummies Estático e Móvel, Combate Ranged/Melee, Projéteis Hextech, Kiting com bônus de AS, Sistema de Alvo Wild Rift, Cursors LoL e Interface Flutuante com placa LoL e números de dano concluídos e verificados em 5 suítes automatizadas.  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
-## Situação verificada
+## Situação verificada na branch `port/game-x0-1to1`
 
-- [x] Repositório GitHub `victorwilliames/game-x1` criado e sincronizado.
-- [x] Primeira documentação técnica/visual e escopo do jogo registrados.
-- [x] Godot 4 disponível e sua versão registrada na máquina de desenvolvimento (`Godot v4.7.2.stable.official.ed1daf0bf`).
-- [x] Projeto Godot mínimo criado no repositório com cena 3D (chão, iluminação direcional com sombras, marcador central e câmera inclinada).
-- [x] Exportação Web (GL Compatibility) gerada e validada via CLI.
-- [x] Pipeline reproduzível CLI para testar (`test.ps1`), exportar (`export_web.ps1`), rodar (`run.ps1`) e servir localmente (`serve_web.ps1`).
-- [x] Prova visual inicial Web da Etapa 0 confirmada por captura no Chrome (60 FPS).
-- [x] Personagem 3D estilo boneco-palito articulado (`scenes/hero/stick_figure.tscn`) com juntas e membros nativos.
-- [x] Animações procedurais nativas de `Idle` (respiração) e `Run` (passadas e braços alternados) sincronizadas com a velocidade horizontal.
-- [x] Anel de seleção circular no chão sob os pés do herói (`SelectionRing`, ciano emissivo).
-- [x] Movimentação por clique no chão com raycast físico restrito à arena e sem overshoot (`step_speed = min(move_speed, distance / delta)`).
-- [x] Teste determinístico automatizado de movimentação e chegada precisa sem oscilação (`scripts/test_movement.gd`).
-- [x] Controlador de câmera isolado estilo LoL (`scenes/moba_camera.gd`, `MobaCamera`):
-  - Câmera livre como modo padrão, centrada inicialmente no herói.
-  - Edge scrolling responsivo proporcional ao tamanho da janela (5% largura, 7% altura, min 36px, max 80px) com aceleração gradual, funcionando perfeitamente em modo janela sem encostar na borda física do monitor.
-  - Navegação alternativa por arrasto com o botão do meio do mouse (MMB Drag-scroll), sem exigir fullscreen ou pointer lock.
-  - Segurar Espaço centraliza suavemente no herói; soltar retorna à câmera livre no local atual sem saltos.
-  - Tecla Y alterna entre câmera livre e câmera travada no herói.
-  - Zoom por scroll do mouse com interpolação suave e limites (9.0m a 22.0m), sem reposicionar o pivô.
-  - Yaw e pitch fixos, com movimentação independente do herói respeitando os limites da arena.
-  - Botão direito exclusivo para movimentar (clique ou arrasto); botão esquerdo não comanda movimento.
-  - Prevenção de rolagem de página no navegador via script em `export_presets.cfg` (`html/head_include`) e `JavaScriptBridge` em `main.gd` (Espaço e Wheel interceptados sobre o canvas; navegação normal preservada fora da área do jogo).
-  - HUD e texto de ajuda atualizados com o modo atual da câmera `[Free]`, `[Locked]`, `[Panning (MMB)]` ou `[Free (Space Centering)]`.
-- [x] Testes automatizados quádruplos (`scripts/test.ps1`: Editor parse, Smoke check 60 frames, Deterministic movement e 8 verificações do Camera controller).
-- [x] Arena isométrica escura com muretas, pilastras, spires de time e 4 dummies inimigos de teste.
-- [x] Diagnóstico e otimização profunda de performance para meta de 120 FPS:
-  - Causa raiz dos ~30 FPS identificada (sub-harmônica de VSync causada por 316k triângulos em juntas de esferas padrão e 4 divisões de sombra com 707 draw calls).
-  - Geometria reduzida de 330.110 para 12.142 faces (-96,3%).
-  - Draw calls reduzidas de 707 para 351 (-50,3%) e primitivas reduzidas de 1,19M para 77k (-93,5%).
-  - Tempo de quadro empírico medido na GPU Intel UHD 620: 4,80 ms (208 FPS) com sombras e 2,35 ms (426 FPS) sem sombras, ambos dentro do orçamento de 8,33 ms (120 FPS).
-  - HUD expandido com telemetria ao vivo: FPS, frame time (ms), browser RAF (Hz), draw calls, primitivas e tecla F1 para alternar sombras.
-  - Script de benchmark GPU automatizado criado (`scripts/bench.ps1` e `scripts/test_performance.gd`).
-
+- [x] **Fase 0 & 1 — Engenharia Reversa e Especificações 1:1:**
+  - Repositório de referência `game-x0-moba` analisado e documentado em `docs/migration/`.
+  - Documentos criados: `GAME_X0_REVERSE_ENGINEERING.md`, `PARITY_MATRIX.md`, `REFERENCE_BASELINE.md`, `MIGRATION_PLAN.md` e `ASSET_LICENSE_AUDIT.md`.
+- [x] **Fase 2 — Cenário e Câmera 1:1:**
+  - Chão 80x80 com shader de grid idêntico ao Three.js (`#0a1016` base, `#c29d53` dourado central, `#162838` células).
+  - Câmera LoL (`scenes/moba_camera.gd`): FOV 38°, offset base `(0, 56, 48)` (pitch 49,4°, yaw 0° alinhado aos eixos), travada com offset do cursor, edge scroll 40 u/s, MMB drag, limites ±38m, centralização em Espaço/' e alternância em Y.
+- [x] **Fase 3 — Importação de Modelos e Assets Oficiais:**
+  - `CaitlynComplete.glb` (36.9 MB) importado e configurado com animações (`idle1_anm`, `run_anm`, `attack1_anm`).
+  - `pointTarget.glb` importado com rotação e escala dinâmica.
+  - Cursores oficiais do LoL (`normal.png`, `alt.png`, `link.png`) convertidos e ativos via `Input.set_custom_mouse_cursor`.
+- [x] **Fase 4 — Personagem Caitlyn e Combate 1:1:**
+  - Caitlyn (`scenes/hero/caitlyn.gd`, `hero.tscn`): escala 0.055, velocidade 16.0 m/s, HP 1072, alcance 18.0 m, attack speed base 1.85.
+  - Animações sincronizadas: `run` a 2.5x, `attack` a 3.5x acelerada com bônus de kiting.
+  - Mecânica de kiting por cliques rápidos: intervalos de 0.10s–0.42s concedem +15% AS por clique (máx +45%), cliques em cooldown reduzem 0.14s do tempo restante.
+  - Ataque Melee (Coronhada de rifle): distância $\le 3.2$ m causa 55 de dano instantâneo com faísca amarela sem gerar projétil.
+  - Projétil Rosa Hextech (`scenes/combat/projectile.tscn`): velocidade 25.0 m/s, dano 55 (crítico 96), teleguiado e direcional.
+  - Dummies (`scenes/arena/dummy.tscn`): Estático em `(7, 0, 7)` e Móvel em `(-7, 0, 7)` oscilando $\pm 8$ m na velocidade 2.5 m/s, 600 HP, círculo de tolerância roxo de 3.0 m, outline vermelho grosso no hover/seleção, flash de dano branco e respawn em 3.0s.
+  - Sistema de Alvo (`scripts/targeting_system.gd`): prioriza dummy próximo ao mouse (raio 5.0 m) ou dummy mais próximo à Caitlyn (18.0 m).
+- [x] **Fase 5 — Interface Flutuante e HUD 1:1:**
+  - Placa do Jogador LoL (`scenes/ui/floating_bars.gd`): projetada acima da cabeça ($y+5.2$), texto "Caitlyn", "1072 / 1072 (100%)" em ciano `#00ffcc`, caixa de nível "5" com borda dourada, barra de vida verde com 10 ticks de 100 HP e barra de mana azul.
+  - Barra de Vida dos Dummies: moldura dourada `#c29d53`, barra vermelha com ticks de 100 HP e texto quantitativo.
+  - Números de Dano Flutuantes (`scenes/ui/floating_damage.gd`): 26px laranja bold (55) ou 34px vermelho bold com "!" (96 crit, 25% de chance), contorno preto espesso, flutuando a 3.2 u/s durante 0.8s.
+  - Indicador de alcance circular (raio 18.0) verde (opacidade 0.08) ou rosa/vermelho (0.35) no modo Attack Move (tecla A).
+  - Marcador de alvo selecionado vermelho pulsante.
+  - Indicador de clique verde animado com `pointTarget.glb` que gira e reduz de escala em 0.35s.
+- [x] **Validação Automatizada Quíntupla (`scripts/test.ps1`):**
+  - 1/5: Import & parse do editor headless.
+  - 2/5: Smoke check de 60 frames.
+  - 3/5: Movimento determinístico e parada sem overshoot (`test_movement.gd`).
+  - 4/5: 7 verificações de câmera e limites (`test_camera.gd`).
+  - 5/5: 7 verificações de combate, dummies, projéteis, kiting e targeting (`test_combat.gd`).
+- [x] **Exportação Web Atualizada (`build/web/`):**
+  - Pacote Web gerado com sucesso via `scripts/export_web.ps1`.
+  - Servido localmente em `http://localhost:8080/`.
 ## Próximos incrementos
 
 **0. Fundação e prova Web**

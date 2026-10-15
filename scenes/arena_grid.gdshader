@@ -1,13 +1,19 @@
 shader_type spatial;
 render_mode cull_back;
 
-uniform vec4 bg_color : source_color = vec4(0.09, 0.12, 0.16, 1.0);
-uniform vec4 grid_color : source_color = vec4(0.18, 0.24, 0.32, 1.0);
-uniform vec4 team_allied_tint : source_color = vec4(0.06, 0.14, 0.20, 1.0);
-uniform vec4 team_enemy_tint : source_color = vec4(0.16, 0.09, 0.11, 1.0);
+// game-x0-moba 1:1 floor & grid shader
+// Floor: #0a1016
+// Grid primary (axes): #c29d53 (Gold)
+// Grid secondary (cells): #162838 (Slate Navy)
+// Grid size: 80x80, 40 divisions (2.0m per cell)
+
+uniform vec4 bg_color : source_color = vec4(0.0392, 0.0627, 0.0863, 1.0); // #0a1016
+uniform vec4 grid_secondary : source_color = vec4(0.0863, 0.1569, 0.2196, 1.0); // #162838
+uniform vec4 grid_primary : source_color = vec4(0.7608, 0.6157, 0.3255, 1.0); // #c29d53
 
 uniform float grid_size = 2.0;
-uniform float line_thickness = 0.025;
+uniform float line_thickness = 0.03;
+uniform float axis_thickness = 0.045;
 
 varying vec3 world_pos;
 
@@ -16,46 +22,27 @@ void vertex() {
 }
 
 void fragment() {
-	// 1. Base team gradient along lane Z axis
-	float z_norm = clamp(world_pos.z / 25.0, -1.0, 1.0);
-	vec3 base_tint;
-	if (z_norm > 0.0) {
-		base_tint = mix(bg_color.rgb, team_allied_tint.rgb, z_norm * 0.45);
-	} else {
-		base_tint = mix(bg_color.rgb, team_enemy_tint.rgb, -z_norm * 0.45);
-	}
+	// 1. Base floor color
+	vec3 col = bg_color.rgb;
 
-	// 2. Subtle, flat grid
+	// 2. Cell coordinates (grid step 2.0m)
 	vec2 coord = world_pos.xz / grid_size;
 	vec2 f_coord = abs(fract(coord - 0.5) - 0.5);
-	vec2 fw = max(fwidth(coord), vec2(0.001));
-	vec2 line_factor = clamp((f_coord / fw) * (line_thickness * 15.0), 0.0, 1.0);
+	vec2 fw = max(fwidth(coord), vec2(0.0005));
+	vec2 line_factor = clamp((f_coord / fw) * (line_thickness * 10.0), 0.0, 1.0);
 	float grid_mask = 1.0 - min(line_factor.x, line_factor.y);
 
-	vec3 col = mix(base_tint, grid_color.rgb, grid_mask * 0.45);
+	// Blend secondary grid lines (#162838)
+	col = mix(col, grid_secondary.rgb, grid_mask);
 
-	// 3. Grid intersection crosses (+)
-	vec2 dist_from_int = abs(fract(coord + 0.5) - 0.5) * grid_size;
-	bool in_cross_x = dist_from_int.x < 0.15 && dist_from_int.y < 0.025;
-	bool in_cross_y = dist_from_int.y < 0.15 && dist_from_int.x < 0.025;
-	if (in_cross_x || in_cross_y) {
-		col = mix(col, vec3(0.35, 0.45, 0.58), 0.6);
-	}
+	// 3. Central primary axes (X = 0 and Z = 0 in #c29d53 Gold)
+	float axis_x = 1.0 - clamp(abs(world_pos.x) / axis_thickness, 0.0, 1.0);
+	float axis_z = 1.0 - clamp(abs(world_pos.z) / axis_thickness, 0.0, 1.0);
+	float axis_mask = max(axis_x, axis_z);
 
-	// 4. Dashed centerline along lane (X = 0)
-	if (abs(world_pos.x) < 0.035 && abs(world_pos.z) < 22.0) {
-		float dash = fract(world_pos.z * 0.6);
-		if (dash > 0.4) {
-			col = mix(col, vec3(0.45, 0.55, 0.65), 0.7);
-		}
-	}
-
-	// 5. Subtle side lane boundary lines (at X = -4.5 and X = 4.5)
-	if (abs(abs(world_pos.x) - 4.5) < 0.025 && abs(world_pos.z) < 22.0) {
-		col = mix(col, grid_color.rgb, 0.4);
-	}
+	col = mix(col, grid_primary.rgb, axis_mask);
 
 	ALBEDO = col;
-	ROUGHNESS = 0.85;
-	SPECULAR = 0.12;
+	ROUGHNESS = 0.8;
+	SPECULAR = 0.1;
 }

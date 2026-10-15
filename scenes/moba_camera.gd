@@ -1,113 +1,71 @@
 extends Node3D
 class_name MobaCamera
 
+# game-x0-moba 1:1 Camera Controller
+# Source: jogo/src/Camera.ts
+# FOV: 38°, OffsetBase: (0, 56, 48), Smoothing: 0.08, MapLimits: ±38
+# Default mode: Locked with Mouse Ratio offset (max 6.0 units)
+
 enum Mode {
 	FREE,
 	LOCKED
 }
 
 @export var target: Node3D
-@export var current_mode: Mode = Mode.FREE
+@export var current_mode: Mode = Mode.LOCKED
 
-# Framing parameters (League of Legends style isometric angle)
-@export var camera_pitch_deg: float = 38.0
-@export var camera_yaw_deg: float = 45.0
-@export var camera_fov: float = 40.0
+# Camera physical offset matching Camera.ts: Vector3(0, 56, 48)
+const OFFSET_BASE := Vector3(0.0, 56.0, 48.0)
+const CAMERA_FOV: float = 38.0
+const MAP_LIMIT_X: float = 38.0
+const MAP_LIMIT_Z: float = 38.0
+const MAX_LOCK_OFFSET: float = 6.0
+const SMOOTHING: float = 0.08
+const EDGE_SCROLL_SPEED: float = 40.0
+const DRAG_SPEED: float = 0.05
 
-# Zoom settings
-@export var min_zoom: float = 9.0
-@export var max_zoom: float = 22.0
-@export var default_zoom: float = 13.5
-@export var zoom_step: float = 1.5
-@export var zoom_lerp_speed: float = 10.0
-
-# Edge panning settings (responsive for windowed browser mode)
 @export var edge_scroll_enabled: bool = true
-@export var edge_margin_ratio_x: float = 0.05 # 5% of viewport width
-@export var edge_margin_ratio_y: float = 0.07 # 7% of viewport height (more generous vertically)
-@export var edge_margin_min_px: float = 36.0
-@export var edge_margin_max_px: float = 80.0
-@export var pan_speed: float = 20.0
-
-# Middle Mouse Button Drag (alternative MOBA camera navigation)
-@export var mmb_drag_enabled: bool = true
-@export var mmb_drag_sensitivity: float = 1.0
-
-# Smooth follow speed
-@export var follow_speed: float = 7.0
-
-# Arena boundary limits for camera pivot
-@export var min_bound_x: float = -14.0
-@export var max_bound_x: float = 14.0
-@export var min_bound_z: float = -34.0
-@export var max_bound_z: float = 34.0
+# Windowed-mode comfortable edge margin (prevents cursor from leaving browser canvas)
+@export var edge_margin_ratio_x: float = 0.04
+@export var edge_margin_ratio_y: float = 0.06
+@export var edge_margin_min_px: float = 24.0
+@export var edge_margin_max_px: float = 60.0
 
 @onready var camera: Camera3D = $Camera3D
 
-var current_distance: float = 13.5
-var target_distance: float = 13.5
+var camera_target: Vector3 = Vector3.ZERO
 var is_space_held: bool = false
 var is_mmb_dragging: bool = false
 var is_headless: bool = false
-
-# Normalized direction from pivot to camera
-var cam_dir: Vector3 = Vector3.ZERO
-# World-space horizontal unit vectors for screen right and screen forward
-var cam_screen_right: Vector3 = Vector3.ZERO
-var cam_screen_fwd: Vector3 = Vector3.ZERO
+var mouse_screen_pos: Vector2 = Vector2.ZERO
 
 signal camera_mode_changed(new_mode: Mode, mode_name: String)
-signal zoom_changed(current_zoom: float)
 
 func _ready() -> void:
 	is_headless = DisplayServer.get_name() == "headless"
-	current_distance = default_zoom
-	target_distance = default_zoom
-	_calculate_camera_vectors()
+	current_mode = Mode.LOCKED
 
 	if not is_headless and camera:
-		camera.fov = camera_fov
-		_apply_camera_offset()
+		camera.fov = CAMERA_FOV
+		_apply_camera_transform()
 
 	if target:
-		global_position = target.global_position
-		_clamp_pivot_position()
+		camera_target = target.global_position
+		global_position = camera_target
+		_clamp_target()
 
-func _calculate_camera_vectors() -> void:
-	var yaw_rad = deg_to_rad(camera_yaw_deg)
-	var pitch_rad = deg_to_rad(camera_pitch_deg)
-
-	var cos_pitch = cos(pitch_rad)
-	var sin_pitch = sin(pitch_rad)
-	var sin_yaw = sin(yaw_rad)
-	var cos_yaw = cos(yaw_rad)
-
-	# Unit vector from pivot to camera
-	cam_dir = Vector3(
-		sin_yaw * cos_pitch,
-		sin_pitch,
-		cos_yaw * cos_pitch
-	).normalized()
-
-	# In world space:
-	# Screen right: perpendicular to yaw in XZ plane
-	cam_screen_right = Vector3(cos_yaw, 0.0, -sin_yaw).normalized()
-	# Screen forward (looking into the screen): opposite to camera horizontal projection
-	cam_screen_fwd = Vector3(-sin_yaw, 0.0, -cos_yaw).normalized()
-
-func _apply_camera_offset() -> void:
+func _apply_camera_transform() -> void:
 	if not camera:
 		return
-	var offset = cam_dir * current_distance
-	camera.position = offset
-	camera.look_at_from_position(offset, Vector3.ZERO, Vector3.UP)
+	camera.position = OFFSET_BASE
+	camera.look_at_from_position(OFFSET_BASE, Vector3.ZERO, Vector3.UP)
 
 func handle_input(event: InputEvent) -> bool:
 	var handled = false
 
-	# 1. Key inputs: Space (Hold to follow) and Y (Toggle Lock)
+	# 1. Key inputs: Space / Quote (Hold to center/follow) and Y (Toggle Lock)
 	if event is InputEventKey and not event.echo:
-		if event.keycode == KEY_SPACE:
+		if event.keycode == KEY_SPACE or event.keycode == KEY_APOSTROPHE or event.keycode == KEY_QUOTELEFT:
 			is_space_held = event.pressed
 			emit_signal("camera_mode_changed", current_mode, get_mode_name())
 			handled = true
@@ -115,35 +73,24 @@ func handle_input(event: InputEvent) -> bool:
 			toggle_lock()
 			handled = true
 
-	# 2. Mouse buttons: MMB drag & Scroll zoom
+	# 2. Mouse buttons: MMB drag
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_MIDDLE:
 			is_mmb_dragging = event.pressed
 			emit_signal("camera_mode_changed", current_mode, get_mode_name())
 			handled = true
-		elif event.pressed:
-			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				zoom_in()
-				handled = true
-			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				zoom_out()
-				handled = true
 
-	# 3. Mouse motion for MMB drag pan (alternative MOBA navigation without pointer lock)
-	elif event is InputEventMouseMotion and is_mmb_dragging and mmb_drag_enabled:
-		var drag_scale = (current_distance / 600.0) * mmb_drag_sensitivity
-		var drag_world = (-cam_screen_right * event.relative.x + cam_screen_fwd * event.relative.y) * drag_scale
-		global_position += drag_world
-		_clamp_pivot_position()
-		handled = true
+	# 3. Mouse motion for MMB drag
+	elif event is InputEventMouseMotion:
+		mouse_screen_pos = event.position
+		if is_mmb_dragging:
+			# In Camera.ts: cameraTarget.x -= dx; cameraTarget.z -= dy
+			camera_target.x -= event.relative.x * DRAG_SPEED
+			camera_target.z -= event.relative.y * DRAG_SPEED
+			_clamp_target()
+			handled = true
 
 	return handled
-
-func zoom_in() -> void:
-	target_distance = clamp(target_distance - zoom_step, min_zoom, max_zoom)
-
-func zoom_out() -> void:
-	target_distance = clamp(target_distance + zoom_step, min_zoom, max_zoom)
 
 func toggle_lock() -> void:
 	if current_mode == Mode.FREE:
@@ -164,84 +111,83 @@ func get_mode_name() -> String:
 	if is_mmb_dragging:
 		return "Panning (MMB)"
 	if is_space_held:
-		return "Free (Space Centering)" if current_mode == Mode.FREE else "Locked"
+		return "Center (Space)"
 	return "Locked" if current_mode == Mode.LOCKED else "Free"
 
 func center_on_target(smooth: bool = false) -> void:
 	if not target:
 		return
 	if smooth:
-		global_position = global_position.lerp(target.global_position, 0.5)
+		camera_target = camera_target.lerp(target.global_position, 0.5)
 	else:
-		global_position = target.global_position
-	_clamp_pivot_position()
+		camera_target = target.global_position
+	_clamp_target()
+	global_position = camera_target
 
 func _process(delta: float) -> void:
-	_update_zoom(delta)
-	_update_position(delta)
+	_update_camera(delta)
 
-func _update_zoom(delta: float) -> void:
-	if abs(current_distance - target_distance) > 0.005:
-		current_distance = lerp(current_distance, target_distance, delta * zoom_lerp_speed)
-		_apply_camera_offset()
-		emit_signal("zoom_changed", current_distance)
-
-func _update_position(delta: float) -> void:
-	# Priority 1: MMB Drag has manual control
-	if is_mmb_dragging:
-		return
-
-	# Priority 2: Follow target if locked or Space is held
-	if is_following_hero() and target:
-		var target_pos = target.global_position
-		target_pos.y = 0.0
-		var speed = follow_speed * (1.5 if is_space_held else 1.0)
-		global_position = global_position.lerp(target_pos, delta * speed)
-		_clamp_pivot_position()
-		return
-
-	# Priority 3: Edge pan in Free mode
-	if current_mode == Mode.FREE and edge_scroll_enabled:
-		_process_edge_pan(delta)
-
-func _process_edge_pan(delta: float) -> void:
+func _update_camera(delta: float) -> void:
 	if is_headless:
+		if target and is_following_hero():
+			camera_target = target.global_position
+			global_position = camera_target
 		return
 
 	var vp = get_viewport()
 	if not vp:
 		return
 
-	var vp_rect = vp.get_visible_rect()
+	var vp_size = vp.get_visible_rect().size
 	var mouse_pos = vp.get_mouse_position()
 
-	# Safety check: cursor must be inside the game window / canvas
-	if not vp_rect.has_point(mouse_pos):
-		return
+	# 1. Modo Locked com Folga de Cursor (Camera.ts linhas 86-103)
+	if is_following_hero() and target:
+		if not is_mmb_dragging:
+			var center_x = vp_size.x * 0.5
+			var center_y = vp_size.y * 0.5
 
-	# Responsive margins tailored for browser windowed mode (prevents cursor from exiting canvas)
-	var margin_x = clamp(vp_rect.size.x * edge_margin_ratio_x, edge_margin_min_px, edge_margin_max_px)
-	var margin_y = clamp(vp_rect.size.y * edge_margin_ratio_y, edge_margin_min_px, edge_margin_max_px)
+			var ratio_x = clamp((mouse_pos.x - center_x) / max(1.0, center_x), -1.0, 1.0)
+			var ratio_y = clamp((mouse_pos.y - center_y) / max(1.0, center_y), -1.0, 1.0)
 
-	var pan_factor_x: float = 0.0
-	if mouse_pos.x < margin_x:
-		pan_factor_x = -clamp((margin_x - mouse_pos.x) / margin_x, 0.0, 1.0)
-	elif mouse_pos.x > vp_rect.size.x - margin_x:
-		pan_factor_x = clamp((mouse_pos.x - (vp_rect.size.x - margin_x)) / margin_x, 0.0, 1.0)
+			var desired_target = target.global_position
+			desired_target.x += ratio_x * MAX_LOCK_OFFSET
+			desired_target.z += ratio_y * MAX_LOCK_OFFSET
 
-	var pan_factor_y: float = 0.0
-	if mouse_pos.y < margin_y:
-		pan_factor_y = clamp((margin_y - mouse_pos.y) / margin_y, 0.0, 1.0) # Up on screen
-	elif mouse_pos.y > vp_rect.size.y - margin_y:
-		pan_factor_y = -clamp((mouse_pos.y - (vp_rect.size.y - margin_y)) / margin_y, 0.0, 1.0) # Down on screen
+			# CameraTarget lerps smoothly with factor 0.08
+			camera_target = camera_target.lerp(desired_target, SMOOTHING)
 
-	if pan_factor_x != 0.0 or pan_factor_y != 0.0:
-		var move_vector = (cam_screen_right * pan_factor_x) + (cam_screen_fwd * pan_factor_y)
-		var speed_mult = move_vector.length()
-		global_position += move_vector.normalized() * (pan_speed * speed_mult) * delta
-		_clamp_pivot_position()
+	# 2. Modo Free com Edge Scrolling
+	elif current_mode == Mode.FREE and edge_scroll_enabled and not is_mmb_dragging:
+		var vp_rect = vp.get_visible_rect()
+		if vp_rect.has_point(mouse_pos):
+			var margin_x = clamp(vp_size.x * edge_margin_ratio_x, edge_margin_min_px, edge_margin_max_px)
+			var margin_y = clamp(vp_size.y * edge_margin_ratio_y, edge_margin_min_px, edge_margin_max_px)
 
-func _clamp_pivot_position() -> void:
-	global_position.x = clamp(global_position.x, min_bound_x, max_bound_x)
-	global_position.z = clamp(global_position.z, min_bound_z, max_bound_z)
-	global_position.y = 0.0
+			var move_x: float = 0.0
+			var move_z: float = 0.0
+
+			if mouse_pos.x <= margin_x:
+				move_x = -1.0
+			elif mouse_pos.x >= vp_size.x - margin_x:
+				move_x = 1.0
+
+			if mouse_pos.y <= margin_y:
+				move_z = -1.0
+			elif mouse_pos.y >= vp_size.y - margin_y:
+				move_z = 1.0
+
+			if move_x != 0.0 or move_z != 0.0:
+				var move_dir = Vector3(move_x, 0.0, move_z).normalized()
+				camera_target += move_dir * (EDGE_SCROLL_SPEED * delta)
+
+	# 3. Clamping nos limites do mapa (±38m)
+	_clamp_target()
+
+	# 4. Atualiza pivô no mundo
+	global_position = camera_target
+
+func _clamp_target() -> void:
+	camera_target.x = clamp(camera_target.x, -MAP_LIMIT_X, MAP_LIMIT_X)
+	camera_target.z = clamp(camera_target.z, -MAP_LIMIT_Z, MAP_LIMIT_Z)
+	camera_target.y = 0.0

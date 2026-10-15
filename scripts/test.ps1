@@ -28,7 +28,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "[game-x1] 4/4: Running headless camera controller checks (Free/Lock/Space/Zoom/Bounds)..."
+Write-Host "[game-x1] 4/5: Running headless camera controller checks (Free/Lock/Space/Zoom/Bounds)..."
 & $godot --headless --path "$projectDir" --script "scripts/test_camera.gd"
 
 if ($LASTEXITCODE -ne 0) {
@@ -36,4 +36,12 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "[game-x1] All headless checks passed successfully!"
+Write-Host "[game-x1] 5/5: Running headless combat, dummy & targeting checks..."
+& $godot --headless --path "$projectDir" --script "scripts/test_combat.gd"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "[game-x1] Headless combat checks failed with exit code $LASTEXITCODE"
+    exit $LASTEXITCODE
+}
+
+Write-Host "[game-x1] All 5 headless check suites passed successfully!"

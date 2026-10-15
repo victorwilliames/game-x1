@@ -1,57 +1,119 @@
 extends Node3D
 
+## 1:1 Port of Game.ts from game-x0-moba (Godot 4)
+## Coordinates Caitlyn, Dummies, Combat AI, Projectiles, Targeting, LoL Cursors, and Floating UI.
+
+const PLAYABLE_MIN_X: float = -38.0
+const PLAYABLE_MAX_X: float = 38.0
+const PLAYABLE_MIN_Z: float = -38.0
+const PLAYABLE_MAX_Z: float = 38.0
+
 @onready var hero: Hero = $Hero
 @onready var camera_controller: MobaCamera = $CameraPivot
-@onready var target_marker: Node3D = $TargetMarker
 @onready var directional_light: DirectionalLight3D = $DirectionalLight3D
+
+@onready var dummies_container: Node3D = $Dummies
+@onready var projectiles_container: Node3D = $Projectiles
+@onready var effects_container: Node3D = $Effects
+
+@onready var range_indicator: MeshInstance3D = $Effects/RangeIndicator
+@onready var target_marker: Node3D = $Effects/TargetMarker
+@onready var click_indicator: Node3D = $Effects/ClickIndicator
+
+@onready var floating_bars: FloatingBars = $UI/FloatingBars
+@onready var floating_damage: FloatingDamage = $UI/FloatingDamage
 @onready var fps_label: Label = $UI/MarginContainer/VBoxContainer/FPSLabel
 @onready var info_label: Label = $UI/MarginContainer/VBoxContainer/InfoLabel
 @onready var help_label: Label = $UI/MarginContainer/VBoxContainer/HelpLabel
 
-# Playable lane boundaries (Issue #2 constraint)
-const PLAYABLE_MIN_X: float = -5.0
-const PLAYABLE_MAX_X: float = 5.0
-const PLAYABLE_MIN_Z: float = -26.0
-const PLAYABLE_MAX_Z: float = 26.0
+const PROJECTILE_SCENE = preload("res://scenes/combat/projectile.tscn")
+
+var cursor_normal: Texture2D
+var cursor_alt: Texture2D
+var cursor_link: Texture2D
+var current_cursor_type: String = "normal"
+
+var dummies: Array = []
+var selected_target: Node3D = null
+var is_attack_move_mode: bool = false
+var click_indicator_timer: float = 0.0
 
 var is_headless: bool = false
-var right_mouse_held: bool = false
 var ground_plane := Plane(Vector3.UP, 0.0)
 
-# Performance & telemetry variables
 var current_frame_time_ms: float = 16.6
 var frame_time_acc: float = 0.0
 var frame_time_count: int = 0
 var last_fps_update_time: float = 0.0
 var cached_raf_hz: int = 0
 
+var range_mat: StandardMaterial3D
+
 func _ready() -> void:
 	is_headless = DisplayServer.get_name() == "headless"
 
-	if hero and not is_headless:
-		hero.move_target_reached.connect(_on_hero_reached_target)
-		# Start hero on allied side of the lane
-		if hero.global_position == Vector3.ZERO:
-			hero.global_position = Vector3(0, 0, 16.0)
+	# Load LoL Cursors
+	cursor_normal = load("res://assets/ui/pointers/normal.png")
+	cursor_alt = load("res://assets/ui/pointers/alt.png")
+	cursor_link = load("res://assets/ui/pointers/link.png")
+	_set_cursor("normal")
 
+	# Gather Dummies
+	if dummies_container:
+		for child in dummies_container.get_children():
+			if child is MobaDummy:
+				dummies.append(child)
+
+	# Configure Hero
+	if hero and not is_headless:
+		hero.shoot.connect(_on_hero_shoot)
+		hero.global_position = Vector3.ZERO
+
+	# Configure Camera
 	if camera_controller and hero:
 		camera_controller.target = hero
 		if not is_headless:
 			camera_controller.center_on_target(false)
 			camera_controller.camera_mode_changed.connect(_on_camera_mode_changed)
 
+	# Setup Floating UI
+	var cam: Camera3D = camera_controller.camera if camera_controller else null
+	if floating_bars and cam:
+		floating_bars.setup(hero, dummies, cam)
+	if floating_damage and cam:
+		floating_damage.setup(cam)
+
+	# Setup Range Indicator Material
+	if range_indicator:
+		range_mat = StandardMaterial3D.new()
+		range_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		range_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		range_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		range_mat.albedo_color = Color(0, 1, 0.533, 0.08) # #00ff88
+		range_indicator.material_override = range_mat
+
+	# Setup PointTarget material
+	if click_indicator:
+		var green_mat = StandardMaterial3D.new()
+		green_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		green_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		green_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		green_mat.albedo_color = Color(0.0, 1.0, 0.533, 0.85) # #00ff88
+		for mesh_inst in click_indicator.find_children("*", "MeshInstance3D"):
+			mesh_inst.material_override = green_mat
+		click_indicator.visible = false
+
+	if target_marker:
+		target_marker.visible = false
+
 	if not is_headless:
 		var renderer_name = ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown")
-		info_label.text = "game-x1 | Combat Testing Lane\nRenderer: %s | Platform: %s" % [renderer_name, OS.get_name()]
-		help_label.text = "Right Click: Move | Edge Pan / MMB Drag: Move Cam | Space (Hold): Center | Y: Lock | Scroll: Zoom"
-		if target_marker:
-			target_marker.visible = false
-
-		# Web-specific integration for windowed browser play (prevents space & wheel from scrolling webpage)
+		info_label.text = "game-x0-moba (Godot 4 Port) | Renderer: %s" % renderer_name
+		help_label.text = "Right Click: Move/Target | Left Click: Smart Attack | [A]: Attack Move | [X]: Shoot | [Space]: Center | [Y]: Lock Cam"
 		if OS.has_feature("web"):
 			_install_web_scroll_preventer()
 
-	print("[game-x1] Main scene ready. Platform: %s, Headless: %s" % [OS.get_name(), str(is_headless)])
+	print("[game-x1] Main 1:1 scene ready. Platform: %s, Headless: %s" % [OS.get_name(), str(is_headless)])
 
 func _install_web_scroll_preventer() -> void:
 	if not OS.has_feature("web"):
@@ -76,7 +138,7 @@ func _install_web_scroll_preventer() -> void:
 			return canvas && (e.target === canvas || canvas.contains(e.target));
 		}
 		window.addEventListener('keydown', function(e) {
-			if (e.code === 'Space' || e.keyCode === 32) {
+			if (e.code === 'Space' || e.keyCode === 32 || e.code === 'Quote' || e.key === "'") {
 				var canvas = document.getElementById('canvas');
 				if (document.activeElement === canvas || document.activeElement === document.body || isCanvasTarget(e)) {
 					e.preventDefault();
@@ -96,96 +158,314 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_headless or not hero:
 		return
 
-	# 0. F1 toggles real-time shadows for live performance diagnosis
+	# F1 toggles real-time shadows
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F1:
 			_toggle_shadows()
 			return
+		elif event.keycode == KEY_A:
+			is_attack_move_mode = true
+			return
+		elif event.keycode == KEY_X:
+			_handle_attack_basic_trigger()
+			return
 
-	# 1. Camera controller handles Space, Y, MMB Drag and Scroll Wheel
+	# Camera input (Space, Y, Quote, MMB, Wheel)
 	if camera_controller and camera_controller.handle_input(event):
 		return
 
-	# 2. Right Click moves the hero (click or drag); Left Click does NOT move
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_RIGHT:
-			right_mouse_held = event.pressed
-			if event.pressed:
-				_order_movement_at_screen_pos(event.position)
-		# Note: MOUSE_BUTTON_LEFT intentionally ignored for movement per LoL design
+	# Mouse clicks
+	if event is InputEventMouseButton and event.pressed:
+		var cursor_pos = _get_floor_world_pos(event.position)
+		if cursor_pos != null:
+			if event.button_index == MOUSE_BUTTON_RIGHT:
+				_handle_right_click(cursor_pos)
+			elif event.button_index == MOUSE_BUTTON_LEFT:
+				_handle_left_click(cursor_pos)
 
-	elif event is InputEventMouseMotion and right_mouse_held:
-		_order_movement_at_screen_pos(event.position)
+func _handle_right_click(cursor_pos: Vector3) -> void:
+	var target_dummy: MobaDummy = null
 
-func _order_movement_at_screen_pos(screen_pos: Vector2) -> void:
-	if not camera_controller or not camera_controller.camera:
+	# Search active dummy within purple tolerance ring (radius 3.0)
+	var min_dist_sq := 3.0 * 3.0
+	for d in dummies:
+		if d and is_instance_valid(d) and d.active:
+			var dx: float = d.global_position.x - cursor_pos.x
+			var dz: float = d.global_position.z - cursor_pos.z
+			var dist_sq: float = dx * dx + dz * dz
+			if dist_sq < min_dist_sq:
+				min_dist_sq = dist_sq
+				target_dummy = d
+
+	# If targeted a dummy
+	if target_dummy != null and target_dummy.active:
+		selected_target = target_dummy
+		is_attack_move_mode = false
+
+		if hero.state == Hero.State.ATTACKING and hero.is_attack_windup_triggered:
+			hero.cancel_attack()
 		return
+
+	# Otherwise, normal ground movement
+	selected_target = null
+	is_attack_move_mode = false
+
+	if hero.state == Hero.State.ATTACKING:
+		hero.cancel_attack()
+
+	var clamped_pos = _clamp_to_bounds(cursor_pos)
+	hero.set_move_target(clamped_pos)
+	_spawn_click_indicator(clamped_pos)
+
+func _handle_left_click(cursor_pos: Vector3) -> void:
+	if is_attack_move_mode:
+		is_attack_move_mode = false
+		var closest_dummy: MobaDummy = null
+		var min_dist_sq := INF
+
+		for d in dummies:
+			if d and is_instance_valid(d) and d.active:
+				var dx: float = d.global_position.x - cursor_pos.x
+				var dz: float = d.global_position.z - cursor_pos.z
+				var dist_sq: float = dx * dx + dz * dz
+				if dist_sq < min_dist_sq:
+					min_dist_sq = dist_sq
+					closest_dummy = d
+
+		if closest_dummy != null:
+			var dist_to_player_sq: float = hero.global_position.distance_squared_to(closest_dummy.global_position)
+			var range_sq := (hero.attack_range + 3.0) * (hero.attack_range + 3.0)
+			if dist_to_player_sq <= range_sq:
+				selected_target = closest_dummy
+			else:
+				var clamped_pos = _clamp_to_bounds(cursor_pos)
+				hero.set_move_target(clamped_pos)
+				selected_target = null
+		else:
+			var clamped_pos = _clamp_to_bounds(cursor_pos)
+			hero.set_move_target(clamped_pos)
+			selected_target = null
+
+		_spawn_click_indicator(_clamp_to_bounds(cursor_pos))
+	else:
+		# Smart attack closest target
+		var best_target = TargetingSystem.find_best_target(hero.global_position, cursor_pos, dummies, hero.attack_range)
+		if best_target != null:
+			selected_target = best_target
+			if hero.attack_cooldown <= 0.0 and hero.state != Hero.State.ATTACKING:
+				hero.start_attack(best_target, null)
+
+func _handle_attack_basic_trigger() -> void:
+	var mouse_pos = get_viewport().get_mouse_position()
+	var cursor_pos = _get_floor_world_pos(mouse_pos)
+
+	var best_target = TargetingSystem.find_best_target(hero.global_position, cursor_pos, dummies, hero.attack_range)
+	if best_target != null:
+		selected_target = best_target
+		if hero.attack_cooldown <= 0.0 and hero.state != Hero.State.ATTACKING:
+			hero.start_attack(best_target, null)
+	else:
+		if hero.attack_cooldown <= 0.0 and hero.state != Hero.State.ATTACKING and cursor_pos is Vector3:
+			var dir: Vector3 = (cursor_pos as Vector3) - hero.global_position
+			dir.y = 0.0
+			hero.start_attack(null, dir)
+
+func _get_floor_world_pos(screen_pos: Vector2) -> Variant:
+	if not camera_controller or not camera_controller.camera:
+		return null
 	var active_cam = camera_controller.camera
 
-	# Physics raycast against actual arena ground collider (Issue #2 fix)
-	var space_state = get_world_3d().direct_space_state
 	var ray_origin = active_cam.project_ray_origin(screen_pos)
 	var ray_dir = active_cam.project_ray_normal(screen_pos)
-	var ray_end = ray_origin + ray_dir * 300.0
 
-	var query = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
-	query.collision_mask = 1 # Floor and environment layer
+	var space_state = get_world_3d().direct_space_state
+	var query = PhysicsRayQueryParameters3D.create(ray_origin, ray_origin + ray_dir * 300.0)
+	query.collision_mask = 1
 	var result = space_state.intersect_ray(query)
 
-	var target_pt: Vector3
-	var valid_hit: bool = false
-
 	if not result.is_empty():
-		target_pt = result.position
-		valid_hit = true
+		return result.position
+
+	var plane_hit = ground_plane.intersects_ray(ray_origin, ray_dir)
+	if plane_hit != null:
+		return plane_hit
+	return null
+
+func _clamp_to_bounds(pos: Vector3) -> Vector3:
+	return Vector3(
+		clampf(pos.x, PLAYABLE_MIN_X, PLAYABLE_MAX_X),
+		0.0,
+		clampf(pos.z, PLAYABLE_MIN_Z, PLAYABLE_MAX_Z)
+	)
+
+func _spawn_click_indicator(pos: Vector3) -> void:
+	if click_indicator:
+		click_indicator.global_position = Vector3(pos.x, 0.05, pos.z)
+		click_indicator.visible = true
+		click_indicator.scale = Vector3(1.5, 1.5, 1.5)
+		click_indicator_timer = 0.35
+
+func _on_hero_shoot(target: Node3D, direction: Variant, is_melee: bool) -> void:
+	var damage := 55.0
+
+	if is_melee:
+		# Coronhada: dano instantâneo + faísca amarela
+		if target and is_instance_valid(target) and target.has_method("take_damage"):
+			target.take_damage(damage)
+			if floating_damage:
+				floating_damage.spawn_damage(damage, target.global_position)
+			_spawn_melee_slash_effect(target.global_position)
 	else:
-		# Fallback: ray against ground plane Y = 0 if within proximity
-		var plane_hit = ground_plane.intersects_ray(ray_origin, ray_dir)
-		if plane_hit != null:
-			if abs(plane_hit.x) <= PLAYABLE_MAX_X + 2.0 and abs(plane_hit.z) <= PLAYABLE_MAX_Z + 2.0:
-				target_pt = plane_hit
-				valid_hit = true
+		# Disparo Ranged: Projétil rosa Hextech a 25 m/s
+		var spawn_pos := hero.global_position + Vector3(0, 1.85, 0)
+		var proj: MobaProjectile = PROJECTILE_SCENE.instantiate()
+		projectiles_container.add_child(proj)
+		proj.init_projectile(spawn_pos, 25.0, damage, target, direction)
+		proj.hit_target_signal.connect(_on_projectile_hit)
 
-	if valid_hit:
-		# Strictly constrain target position within finite playable lane bounds
-		var clamped_pos = Vector3(
-			clamp(target_pt.x, PLAYABLE_MIN_X, PLAYABLE_MAX_X),
-			0.0,
-			clamp(target_pt.z, PLAYABLE_MIN_Z, PLAYABLE_MAX_Z)
-		)
-		hero.set_move_target(clamped_pos)
-		_show_target_marker(clamped_pos)
+func _on_projectile_hit(damage: float, hit_pos: Vector3) -> void:
+	if floating_damage:
+		floating_damage.spawn_damage(damage, hit_pos)
 
-func _show_target_marker(pos: Vector3) -> void:
-	if not target_marker:
-		return
-	target_marker.global_position = Vector3(pos.x, 0.03, pos.z)
-	target_marker.visible = true
-	target_marker.scale = Vector3(1.3, 1.3, 1.3)
+func _spawn_melee_slash_effect(pos: Vector3) -> void:
+	var slash := MeshInstance3D.new()
+	var mesh := TorusMesh.new()
+	mesh.inner_radius = 0.1
+	mesh.outer_radius = 0.8
+	mesh.rings = 16
+	mesh.ring_segments = 3
+	slash.mesh = mesh
 
-func _on_hero_reached_target() -> void:
-	if target_marker:
-		target_marker.visible = false
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_color = Color(1.0, 0.8, 0.0, 0.9) # Amarelo de impacto
+	slash.material_override = mat
 
-func _on_camera_mode_changed(_mode: MobaCamera.Mode, _mode_name: String) -> void:
-	_update_hud()
+	slash.global_position = pos + Vector3(0, 1.35, 0)
+	slash.rotation = Vector3(randf() * PI, randf() * PI, randf() * PI)
+	effects_container.add_child(slash)
 
-func _toggle_shadows() -> void:
-	if directional_light:
-		directional_light.shadow_enabled = not directional_light.shadow_enabled
-		print("[game-x1] Directional shadows toggled: %s" % str(directional_light.shadow_enabled))
-		_update_hud()
+	var tween = create_tween()
+	tween.tween_property(slash, "scale", Vector3(3.0, 3.0, 3.0), 0.15)
+	tween.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.15)
+	tween.tween_callback(slash.queue_free)
+
+func _handle_combat_ai() -> void:
+	if selected_target != null:
+		if not is_instance_valid(selected_target) or not selected_target.get("active"):
+			selected_target = null
+			return
+
+		var dist: float = hero.global_position.distance_to(selected_target.global_position)
+		if dist <= hero.attack_range:
+			if hero.state == Hero.State.WALKING:
+				hero.stop()
+			if hero.attack_cooldown <= 0.0 and hero.state != Hero.State.ATTACKING:
+				hero.start_attack(selected_target, null)
+		else:
+			if hero.state != Hero.State.ATTACKING:
+				hero.set_move_target(selected_target.global_position)
 
 func _process(delta: float) -> void:
 	if is_headless:
 		return
 
-	# Target marker visual pulse
-	if target_marker and target_marker.visible:
-		target_marker.scale = target_marker.scale.lerp(Vector3.ONE, delta * 8.0)
-		target_marker.rotate_y(delta * 2.5)
+	# 1. Update Dummies
+	for d in dummies:
+		if d and is_instance_valid(d):
+			d.update_dummy(delta)
 
-	# Frame time calculation (smoothed every 0.2s for clean readability)
+	# 2. Update Active Projectiles
+	for child in projectiles_container.get_children():
+		if child is MobaProjectile:
+			child.update_projectile(dummies, delta)
+
+	# 3. Process Combat AI
+	_handle_combat_ai()
+
+	# 4. Update Range Indicator (Follows Caitlyn, color changes on Attack Move)
+	if range_indicator and hero:
+		range_indicator.global_position = hero.global_position + Vector3(0, 0.02, 0)
+		if range_mat:
+			if is_attack_move_mode:
+				range_mat.albedo_color = Color(1.0, 0.0, 0.33, 0.35) # #ff0055
+			else:
+				range_mat.albedo_color = Color(0.0, 1.0, 0.533, 0.08) # #00ff88
+
+	# 5. Update Target Marker on selected dummy
+	if target_marker:
+		if selected_target != null and is_instance_valid(selected_target) and selected_target.get("active"):
+			target_marker.global_position = selected_target.global_position + Vector3(0, 0.03, 0)
+			target_marker.visible = true
+			var s := 1.0 + sin(Time.get_ticks_msec() * 0.01) * 0.1
+			target_marker.scale = Vector3(s, s, s)
+		else:
+			target_marker.visible = false
+
+	# 6. Update Click Indicator (Spins and scales down)
+	if click_indicator and click_indicator.visible:
+		click_indicator_timer -= delta
+		var progress := click_indicator_timer / 0.35
+		if progress <= 0.0:
+			click_indicator.visible = false
+		else:
+			click_indicator.rotation.y += delta * 6.0
+			var s := 1.5 * progress
+			click_indicator.scale = Vector3(s, s, s)
+
+	# 7. Update Outlines & Hover Cursors
+	_update_hover_and_cursor()
+
+	# 8. FPS and Telemetry
+	_update_telemetry(delta)
+
+func _update_hover_and_cursor() -> void:
+	var mouse_pos = get_viewport().get_mouse_position()
+	var cursor_world = _get_floor_world_pos(mouse_pos)
+
+	for d in dummies:
+		if d and is_instance_valid(d):
+			d.set_outline_visible(false)
+
+	var hover_enemy = false
+
+	if cursor_world is Vector3:
+		for d in dummies:
+			if d and is_instance_valid(d) and d.active:
+				if selected_target == d:
+					d.set_outline_visible(true)
+
+				var dx: float = d.global_position.x - cursor_world.x
+				var dz: float = d.global_position.z - cursor_world.z
+				var dist_sq: float = dx * dx + dz * dz
+				if dist_sq <= 3.0 * 3.0: # Purple ring radius tolerance
+					hover_enemy = true
+					d.set_outline_visible(true)
+
+	if hover_enemy:
+		_set_cursor("alt")
+	elif is_attack_move_mode:
+		_set_cursor("link")
+	else:
+		_set_cursor("normal")
+
+func _set_cursor(type: String) -> void:
+	if current_cursor_type == type:
+		return
+	current_cursor_type = type
+
+	var tex: Texture2D = cursor_normal
+	if type == "alt" and cursor_alt:
+		tex = cursor_alt
+	elif type == "link" and cursor_link:
+		tex = cursor_link
+
+	if tex:
+		Input.set_custom_mouse_cursor(tex, Input.CURSOR_ARROW, Vector2.ZERO)
+
+func _update_telemetry(delta: float) -> void:
 	frame_time_acc += delta
 	frame_time_count += 1
 	var now = Time.get_ticks_msec() / 1000.0
@@ -222,11 +502,22 @@ func _update_hud() -> void:
 		prims,
 		shadow_str
 	]
-	info_label.text = "game-x1 | Hero: (%.1f, %.1f) | Speed: %.1f m/s | Cam: [%s] | Zoom: %.1fm" % [
+	info_label.text = "Caitlyn: (%.1f, %.1f) | HP: %d/%d | AS: %.2f (+%d%%) | Speed: %.1f m/s | Cam: [%s]" % [
 		hero.global_position.x,
 		hero.global_position.z,
+		roundi(hero.hp),
+		roundi(hero.max_hp),
+		hero.attack_speed * (1.0 + hero.attack_speed_bonus),
+		roundi(hero.attack_speed_bonus * 100.0),
 		h_vel,
-		cam_mode,
-		cam_zoom
+		cam_mode
 	]
-	help_label.text = "Right Click: Move | Edge Pan / MMB Drag: Move Cam | Space (Hold): Center | Y: Lock | Scroll: Zoom | F1: Toggle Shadows"
+	help_label.text = "Right Click: Move/Target | Left Click: Smart Attack | [A]: Attack Move | [X]: Shoot | [Space]: Center | [Y]: Lock Cam"
+
+func _toggle_shadows() -> void:
+	if directional_light:
+		directional_light.shadow_enabled = not directional_light.shadow_enabled
+		_update_hud()
+
+func _on_camera_mode_changed(_mode: MobaCamera.Mode, _mode_name: String) -> void:
+	_update_hud()

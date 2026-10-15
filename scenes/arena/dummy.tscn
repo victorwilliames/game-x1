@@ -1,0 +1,91 @@
+[gd_scene format=3 uid="uid://c67uqv263s28p"]
+
+[ext_resource type="Script" path="res://scenes/arena/dummy.gd" id="1_dummy_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
+albedo_color = Color(0.619608, 0.164706, 0.168627, 1)
+metallic = 0.2
+roughness = 0.5
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+material = SubResource("StandardMaterial3D_body")
+radius = 0.7
+height = 1.5
+radial_segments = 16
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_outline"]
+shading_mode = 0
+cull_mode = 1
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_outline"]
+material = SubResource("StandardMaterial3D_outline")
+radius = 0.85
+height = 1.65
+radial_segments = 16
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eyes"]
+shading_mode = 0
+albedo_color = Color(1, 0.231373, 0.188235, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_eye"]
+material = SubResource("StandardMaterial3D_eyes")
+size = Vector3(0.15, 0.15, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fill"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.666667, 0, 1, 0.04)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_fill"]
+material = SubResource("StandardMaterial3D_fill")
+top_radius = 3.0
+bottom_radius = 3.0
+height = 0.001
+radial_segments = 32
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_border"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.666667, 0, 1, 0.35)
+
+[sub_resource type="TorusMesh" id="TorusMesh_border"]
+material = SubResource("StandardMaterial3D_border")
+inner_radius = 2.96
+outer_radius = 3.0
+rings = 32
+ring_segments = 3
+
+[node name="Dummy" type="Node3D"]
+script = ExtResource("1_dummy_script")
+
+[node name="VisualGroup" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="VisualGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Outline" type="MeshInstance3D" parent="VisualGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+visible = false
+mesh = SubResource("CapsuleMesh_outline")
+
+[node name="EyeLeft" type="MeshInstance3D" parent="VisualGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 2, 0.55)
+mesh = SubResource("BoxMesh_eye")
+
+[node name="EyeRight" type="MeshInstance3D" parent="VisualGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 2, 0.55)
+mesh = SubResource("BoxMesh_eye")
+
+[node name="ToleranceRing" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+
+[node name="Fill" type="MeshInstance3D" parent="ToleranceRing"]
+mesh = SubResource("CylinderMesh_fill")
+
+[node name="Border" type="MeshInstance3D" parent="ToleranceRing"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("TorusMesh_border")

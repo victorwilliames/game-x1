@@ -1,33 +1,41 @@
-# Visualização de desenvolvimento — game-x1
+# Direção de Arte e Visual — game-x1 (Branch: port/game-x0-1to1)
 
-**Regra vigente:** NÃO focar em gráficos finais. Este arquivo documenta somente a representação visual mínima que permite **desenvolver, observar, depurar e testar o jogo**.
+**Regra vigente nesta branch:** Paridade visual 1:1 com o protótipo aprovado **`game-x0-moba`**.
+A antiga exigência de "apenas bonecos-palito e arte provisória" está revogada para esta migração, conforme ordem explícita do proprietário.
 
-## Referência visual aprovada para prototipagem
+---
 
-A imagem enviada pelo usuário em 15/10/2026 mostra um **boneco de linhas com articulações pontuadas**, desenhado sobre **piso escuro quadriculado em perspectiva**. É uma referência de **nível de simplicidade e linguagem de debug**, não uma exigência de reprodução artística exata.
+## 1. Identidade Visual da Referência (game-x0-moba)
 
-- **Herói:** boneco-palito / esqueleto articulado no mundo 3D; braços e pernas como linhas ou cilindros finos, juntas como pontos/esferas pequenas. Cabeça e torso podem ser apenas marcadores simples.
-- **Movimento:** visualizar claramente pivôs, rotação, direção, Idle, Run, Attack, Cast, Dodge, Hit e Death. Pode usar movimentação procedural ou AnimationPlayer simples.
-- **Cenário:** plano 3D, grade de referência e limites da arena visíveis. Sem árvores, montanhas, props decorativos ou texturas complexas.
-- **Minions e torres:** marcadores, cápsulas, cubos ou silhuetas geométricas simplificadas, distinguíveis por forma/equipe.
-- **Poderes Q/W/E/R:** geometria básica, trajetórias, círculos de alcance, sinais de área, cor e duração suficientes para verificar timing/colisão/dano; nenhum VFX polido obrigatório.
-- **HUD:** HP, cooldowns, alvo, status e informações de teste com texto/retângulos simples. Clareza funcional acima da aparência.
-- **Depuração opcional:** hitboxes, raios de ataque, waypoints, navegação, velocidade, FPS e estados de IA, com exibição configurável.
+O visual do jogo deve reproduzir exatamente o que é renderizado no `game-x0-moba`:
 
-## Como implementar
+1. **Cenário de Testes:**
+   - Fundo escuro azulado `#03070c`.
+   - Piso de desenvolvimento cinza ardósia `#0a1016` ($80 \times 80\text{ m}$).
+   - Grid técnico com linhas primárias douradas `#c29d53` e secundárias azul escuro `#162838`.
+   - Iluminação direcionada e suave com projeção de sombras PBR.
 
-- Tudo permanece em **Godot 3D com câmera elevada e inclinada**, apesar do aspecto de boneco-palito. Não transformar o projeto em plataforma 2D.
-- Preferir recursos nativos: MeshInstance3D, SphereMesh/CylinderMesh/BoxMesh, segmentos desenhados e materiais simples; evitar addons pesados.
-- Articulações e animações devem refletir eventos reais da gameplay. Não usar animação como fonte autoritativa de dano/colisão.
-- Separar classes/estado do herói da representação de debug. O visual deve ser substituível futuramente sem refazer movimentação, hit detection ou habilidades.
-- **Não produzir** modelagem complexa, rigs de produção, texturas, cenários detalhados, shaders cinematográficos, efeitos de partículas elaborados, ícones finais ou ilustrações. Não usar Blender ou serviços pagos para cumprir estas etapas.
+2. **Personagem Jogável (Caitlyn):**
+   - Modelo oficial completo (`CaitlynComplete.glb`) na escala $0.055$.
+   - Texturas PBR originais e materiais fiéis à versão de referência.
+   - Animações oficiais de Idle, Run e Attack integradas com sincronismo de velocidade e kiting.
 
-## Critério de aceite visual nesta fase
+3. **Inimigos (Dummies):**
+   - Cápsulas estilizadas em vermelho escuro `#9e2a2b` com olhos em `#ff3b30`.
+   - Contorno vermelho puro `#ff0000` espesso para feedback de seleção e hover.
+   - Círculo roxo de tolerância no chão (`#aa00ff`, raio $3.0\text{ m}$).
 
-A pergunta não é 'está bonito?', mas sim: **o jogador consegue controlar e perceber o que aconteceu?** É possível observar direção, movimento, animação, esquiva, ataque, acerto, falha, colisão, vida, cooldown e objetivos na câmera real de jogo? A build Web representa corretamente estes estados?
+4. **Interface (HUD e Overlays):**
+   - Placa de campeão inspirada no League of Legends (quadrado de nível 5, barra de vida verde, mana azul, divisores a cada 100 HP).
+   - Barras de vida de inimigos com moldura dourada e barra vermelha.
+   - Números de dano flutuantes em fonte estilo Outfit (laranja e vermelho crítico).
+   - Marcador verde de clique rotativo (`pointTarget.glb`).
+   - Cursores customizados de MOBA (`normal.cur`, `alt.cur`, `link.cur`).
 
-Um protótipo pode estar completo para esta fase mesmo parecendo um ambiente de testes de física/animação.
+---
 
-## Fase artística futura
+## 2. Princípios de Implementação no Godot 4
 
-Somente após solicitação explícita da direção do produto: definir identidade visual final, modelos, materiais, cenários, animação profissional e pipeline opcional Blender CLI/glTF. Até lá, evitar tarefas de polimento visual.
+- Renderizador `Compatibility` (WebGL 2.0 / OpenGL 3.3).
+- Carregamento nativo dos arquivos `.glb` sem dependências externas.
+- Preservação da alta taxa de quadros (meta de 120 FPS em monitores de 120 Hz).

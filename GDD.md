@@ -1,85 +1,83 @@
-# GDD — game-x1 (protótipo 1v1)
+# GDD — game-x1 (Port 1:1 de game-x0-moba)
 
-**Status:** rascunho de pré-produção. Decisões e números ainda podem mudar após playtests.
+**Status:** Documento de Especificação da Migração 1:1 para Godot 4 (Branch: `port/game-x0-1to1`).  
+**Fonte da verdade:** `game-x0-moba` (código Three.js/TypeScript e gameplay aprovado).
 
-## 1. Visão
+---
 
-MOBA competitivo 3D visto por uma câmera elevada e inclinada, com controles claros, habilidades legíveis e um combate responsivo. Referências de experiência: jogos de arena/lane do gênero MOBA; identidade, personagens e assets serão originais.
+## 1. Visão do Projeto
 
-**Objetivo imediato:** produzir uma partida completa 1v1 de uma única rota que seja agradável de jogar mesmo com arte simples.
+O objetivo do `game-x1` nesta branch é realizar a **migração integral e reprodução fiel do jogo `game-x0-moba`** para Godot 4.
+Não estamos criando um novo jogo ou outra interpretação do gênero MOBA: estamos reconstruindo a recriação já aprovada pelo proprietário no motor Godot, garantindo que ambas as versões sejam visual e funcionalmente idênticas.
 
-**Política visual obrigatória nesta fase:** o jogo será uma **plataforma de desenvolvimento e testes de gameplay**, com gráficos diagnósticos intencionais, não uma demonstração de arte. A referência visual é um boneco-palito/esqueleto articulado com linhas e pontos nas juntas, em um chão quadriculado escuro. Não polir personagens, cenário, HUD ou VFX enquanto não houver autorização explícita.
+---
 
-**Plataformas:** Web para playtest, Windows e Android como alvos desde cedo. No PC, mouse/teclado; controles touch vêm em etapa específica.
+## 2. Cenário e Arena
 
-## 2. Loop jogável
+- **Dimensões:** Piso plano $80 \times 80$ metros na cor cinza escuro `#0a1016`.
+- **Fundo:** `#03070c`.
+- **Grid de Desenvolvimento:**
+  - Células quadradas de $2 \times 2$ metros.
+  - Linhas primárias douradas `#c29d53`, linhas secundárias azul ardósia `#162838`.
+- **Limites da Câmera:** Área visível restrita a $\pm 38$ metros nos eixos X e Z.
+- **Iluminação:**
+  - Luz ambiente `#121b26` (intensidade 1.5).
+  - Luz direcional `#ffffff` (intensidade 2.0 em $(20, 40, 20)$ com projeção de sombras no chão).
 
-1. Entrar na arena com um herói e uma base por lado.
-2. Avançar pela única lane, acompanhando ondas de minions aliados.
-3. Acertar ataques básicos, habilidades e esquivas; preservar HP.
-4. Enfrentar um bot inimigo funcional no primeiro slice.
-5. Destruir a torre adversária e, depois, o núcleo inimigo para vencer.
-6. Permitir reiniciar a partida imediatamente.
+---
 
-**1v1 online** substitui o bot numa fase posterior, mantendo as mesmas regras de combate e vitória.
+## 3. Personagem Jogável (Caitlyn)
 
-## 3. Arena
+- **Modelo 3D:** Modelo completo da Caitlyn (`CaitlynComplete.glb`), escala $0.055$.
+- **Atributos:**
+  - Vida: $1072$ HP.
+  - Velocidade de Movimento: $16.0\text{ m/s}$.
+  - Alcance de Ataque: $18.0\text{ metros}$.
+  - Velocidade de Ataque Base: $1.85\text{ ataques/s}$.
+  - Dano Base: $55$ (25% de chance de crítico para $96$).
+- **Movimentação:**
+  - Clique direito no chão define destino.
+  - Transição imediata entre Idle e Run.
+  - Animação de corrida acelerada a $2.5\times$ de velocidade.
+  - Rotação suave em direção ao vetor de deslocamento (`diff * 0.25` por frame).
+- **Combate e Kiting:**
+  - Windup de $0.04\text{ s}$ e tempo de animação de tiro de $0.12\text{ s}$ (acelerada a $3.5\times$).
+  - Disparo de projétil Hextech rosa `#ff007f` a $25.0\text{ m/s}$ (teleguiado ao alvo).
+  - Ataque corpo a corpo automático a $\le 3.2\text{ m}$ (coronhada com dano instantâneo e faísca amarela).
+  - **Mecânica de Kiting:** Cliques rápidos no ritmo de $0.10\text{ s}$ a $0.42\text{ s}$ concedem $+15\%$ a $+45\%$ de velocidade de ataque por $1.0\text{ s}$ e reduzem $0.14\text{ s}$ do cooldown restante.
+  - Cancelamento imediato de animação ao clicar no chão para andar.
 
-- Uma lane central claramente navegável e visualizada com chão plano/grade. Sem obrigação de vegetação, rochas, ornamentos ou cenário artístico.
-- Duas bases opostas, **uma torre defensiva por lado** e um núcleo por base.
-- Minions surgem em ondas regulares e avançam em direção à estrutura inimiga.
-- Navegação/colisão impedem atravessar obstáculos; alcance e áreas de ataque devem ser visíveis.
-- Sem jungle, três lanes, loja extensa, dezenas de heróis ou matchmaking neste primeiro slice.
+---
 
-## 4. Herói inicial
+## 4. Inimigos (Dummies de Teste)
 
-**Arquétipo lógico provisório:** mago com ataques e habilidades mágicas; **aparência temporária:** boneco-palito 3D articulado, formado por segmentos simples e pontos nas juntas, como a referência enviada pelo usuário. Cajado, roupa, rosto, textura, cabelo e detalhes estéticos não são necessários nesta etapa.
+1. **Dummy Estático:** Posição $(7, 0, 7)$, $600$ HP.
+2. **Dummy Móvel:** Posição $(-7, 0, 7)$, $600$ HP, move-se a $2.5\text{ m/s}$ no eixo X oscilando $\pm 8.0\text{ m}$ e girando $180^\circ$.
+- **Visual:** Cápsula vermelha escura `#9e2a2b` com dois olhos vermelhos brilhantes `#ff3b30`.
+- **Outline:** Contorno espesso vermelho puro `#ff0000` ativado em hover do mouse ou seleção.
+- **Círculo de Tolerância:** Anel roxo no chão com raio de $3.0\text{ m}$ facilitando cliques no alvo.
+- **Reação:** Flash branco por $0.1\text{ s}$ ao receber dano. Tomba $90^\circ$ ao morrer e ressurge após $3.0\text{ s}$.
 
-**Movimentos/animações:** Idle, Run, Attack, Cast, Dodge, Hit, Death e respawn. Nesta fase o objetivo é testar poses, articulações, transições, sincronização e responsividade, mesmo que os movimentos usem apenas linhas/segmentos. Precisam ser legíveis da câmera de gameplay.
+---
 
-**Comandos desktop propostos:**
-- Clique direito no chão: mover.
-- Clique direito no inimigo: perseguir até o alcance e atacar automaticamente.
-- Q/W/E/R: ativar habilidades, com indicação adequada de direção/alcance/alvo.
-- Shift: esquiva curta e responsiva com recarga.
-- Mouse: mirar; câmera acompanha o herói (com espaço para ajustes de UX).
+## 5. Controles e Entradas
 
-**Habilidades protótipo (sujeitas a playtest):**
-| Entrada | Ação | Teste essencial |
-| --- | --- | --- |
-| Ataque básico | Projétil/ataque direcionado, cooldown próprio | Alvo no alcance sofre um único evento de dano |
-| Q | Projétil mágico direcional | Trajetória, colisão, impacto e recarga claros |
-| W | Explosão em área telegrafada | Área e momento do dano correspondem ao indicador |
-| E | Impulso mágico curto com feedback visual | Reposiciona respeitando colisões/limites |
-| R | Explosão de alto impacto com preparação | Antecipação clara, dano e recarga longa |
-| Shift | Esquiva evasiva | Deslocamento, recuperação e recarga consistentes |
+| Comando | Entrada | Ação |
+| :--- | :--- | :--- |
+| **Mover / Atacar** | Botão Direito | Clicar no chão move; clicar no dummy (ou na área roxa de $3.0\text{ m}$) ataca. |
+| **Attack Move** | Tecla `A` + Clique Esquerdo | Exibe círculo vermelho de alcance e ataca o inimigo mais próximo do clique. |
+| **Ataque Direcional** | Tecla `X` | Disparo direcional na direção do cursor (estilo Wild Rift). |
+| **Trava de Câmera** | Tecla `Y` | Alterna entre câmera travada no campeão e câmera livre. |
+| **Centralizar Câmera**| `Espaço` ou `'` (Quote) | Centraliza suavemente a visão na Caitlyn. |
+| **Arrastar Câmera** | Botão do Meio (MMB) | Arrasta o cenário com deslocamento livre. |
+| **Edge Scrolling** | Bordas da tela ($\le 18\text{px}$) | Desloca a câmera livre a $40\text{ unidades/s}$. |
 
-**Observação:** diferenciar E (habilidade especial) de Shift (esquiva mecânica); avaliar redundância no playtest.
+---
 
-## 5. Combate e sistemas mínimos
+## 6. Interface (HUD) e Feedback Visual
 
-- HP, morte, respawn, ataque, dano, cooldowns, alvos e indicadores.
-- Mana/custo de habilidades apenas se melhorar a decisão do jogador no protótipo.
-- Minions: seguir lane, adquirir alvo, atacar e morrer.
-- Torre: selecionar alvo válido, telegrafar/disparar e causar dano.
-- Bot: caminhar, combater, usar ao menos Q, recuar quando em risco e respeitar regras compartilhadas.
-- HUD: barras de vida, habilidades Q/W/E/R, recargas, placar/objetivo e tela de vitória/derrota.
-- Ouro, XP, itens e loja são **extensões opcionais**, posteriores ao combate satisfatório, não bloqueadores do primeiro ciclo jogável.
-
-## 6. Critérios de aceite do primeiro protótipo jogável
-
-- Uma partida local vs bot começa, termina e reinicia sem edição manual.
-- Hero move, gira, ataca e esquiva com transições animadas coerentes.
-- Q/W/E/R ativam, respeitam cooldowns e mostram feedback de acerto/erro.
-- Minions e torres interagem com heróis, geram dano e podem ser destruídos.
-- A base inimiga pode ser destruída e a condição de vitória dispara corretamente.
-- Existe exportação Web jogável, com entrada e HUD utilizáveis no navegador.
-- O Antigravity registra testes reais, problemas pendentes e passos de reprodução.
-
-## 7. Não escopo agora
-
-5v5, três rotas, ranking, matchmaking, contas, monetização, fog of war completo, cosméticos, arte AAA, modelos humanos complexos, asset marketplace, servidores públicos e Android pronto para loja.
-
-## 8. Critério de evolução
-
-Testar **game feel antes de fidelidade visual**. Quando o protótipo for divertido: melhorar arte original, validação multiplayer autoritativa, mais heróis e modo online, na ordem que os testes justificarem.
+- **Placa da Caitlyn:** Nível "5", barra de HP verde com ticks pretos a cada 100 HP, barra de Mana azul, nome e valores textuais.
+- **Placa dos Dummies:** Borda dourada, barra vermelha de HP com ticks a cada 100 HP, nome e texto quantitativo.
+- **Números de Dano:** Laranja `#ff9f00` (26px) para acertos comuns e vermelho `#ff3300` (34px) com `"!"` para críticos.
+- **Indicador de Clique:** Modelo `pointTarget.glb` verde `#00ff88` giratório desvanecendo em $0.35\text{ s}$.
+- **Cursores Customizados:** Cursores oficiais de League of Legends (`normal.cur`, `alt.cur`, `link.cur`).
