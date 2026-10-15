@@ -71,6 +71,9 @@ try {
         # Security/headers for WebAssembly & Godot
         $response.AddHeader("Cross-Origin-Opener-Policy", "same-origin")
         $response.AddHeader("Cross-Origin-Embedder-Policy", "require-corp")
+        $response.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+        $response.AddHeader("Pragma", "no-cache")
+        $response.AddHeader("Expires", "0")
 
         try {
             # Reject direct traversal patterns before resolving
