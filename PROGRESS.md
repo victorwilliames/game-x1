@@ -1,7 +1,7 @@
 # Progresso — game-x1
 
 **Atualizado:** 2026-10-15  
-**Fase:** Etapa 0 com renderização Web confirmada por captura do usuário; próximo incremento Etapa 1A. Animação do cubo/console e execução nativa seguem sem confirmação independente.  
+**Fase:** Etapa 1A implementada e validada via CLI e Web (boneco-palito 3D articulado, Idle/Run, movimentação por clique no chão e câmera suave); pronta para validação visual humana.  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
 ## Situação verificada
@@ -12,6 +12,12 @@
 - [x] Projeto Godot mínimo criado no repositório com cena 3D (chão, iluminação direcional com sombras, marcador central e câmera inclinada).
 - [x] Exportação Web (GL Compatibility) gerada e validada via CLI.
 - [x] Pipeline reproduzível CLI para testar (`test.ps1`), exportar (`export_web.ps1`), rodar (`run.ps1`) e servir localmente (`serve_web.ps1`).
+- [x] Prova visual inicial Web da Etapa 0 confirmada por captura no Chrome (60 FPS).
+- [x] Personagem 3D estilo boneco-palito articulado (`scenes/hero/stick_figure.tscn`) com juntas e membros nativos.
+- [x] Animações procedurais nativas de `Idle` (respiração) e `Run` (passadas e braços alternados) sincronizadas com a velocidade horizontal.
+- [x] Movimentação por clique direito no chão com `CharacterBody3D`, rotação coerente e parada no destino.
+- [x] Câmera inclinada seguindo o herói suavemente via `lerp`.
+- [x] Cenário com chão quadriculado de laboratório (`scenes/arena_grid.gdshader`) para percepção clara de escala e distância.
 
 ## Próximos incrementos
 
@@ -19,13 +25,13 @@
 - [x] Projeto Godot 4.x com cena 3D, chão, luz e câmera inclinada.
 - [x] Comando/script para importar e executar pelo terminal (`scripts/test.ps1`, `scripts/run.ps1`).
 - [x] Exportação Web funcional gerando HTML/WASM/PCK (`scripts/export_web.ps1`) e servida com headers COOP/COEP (`scripts/serve_web.ps1`).
-- [x] Captura real da cena Web no Chrome (chão, cubo/sombra, câmera, HUD, ~60 FPS). A captura não comprova rotação do cubo nem console sem erros.
+- [x] Captura real da cena Web no Chrome (chão, cubo/sombra, câmera, HUD, ~60 FPS).
 - [ ] Teste simples para Windows; avaliação inicial das limitações Android.
 
 **1. Herói e movimentação**
-- [ ] Boneco-palito 3D articulado com segmentos/juntas visíveis, Idle e Run (visual de desenvolvimento, sem arte final).
-- [ ] Clique para mover, rotação coerente, câmera acompanhando.
-- [ ] Esquiva (Shift) com animação, cooldown e colisão.
+- [x] (1A) Boneco-palito 3D articulado com segmentos/juntas visíveis, Idle e Run (visual de desenvolvimento, sem arte final).
+- [x] (1A) Clique para mover com botão direito, rotação coerente e câmera acompanhando suavemente.
+- [ ] (1B) Esquiva (Shift) com animação, cooldown e colisão.
 
 **2. Combate básico**
 - [ ] Ataque e HP/dano/morte.
@@ -49,4 +55,4 @@
 
 Registrar por incremento: commit, funcionalidade jogável, comando/teste executado, resultado, captura real (quando visual) e limitações. Não reportar aprovação estética sem playtest humano.
 
-**Próxima tarefa para o Antigravity:** Etapa 1A: boneco-palito 3D articulado, Idle/Run, movimento por clique direito e câmera acompanhando; não iniciar ainda esquiva ou combate. Validar Web, atualizar HANDOFF e publicar.
+**Próxima tarefa para o Antigravity:** Após validação humana do movimento do herói na Web, implementar a Etapa 1B (esquiva no Shift com recarga e rastro/feedback visual).

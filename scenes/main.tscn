@@ -1,12 +1,14 @@
-[gd_scene load_steps=10 format=3 uid="uid://b7vyk4mfl8y2s"]
+[gd_scene load_steps=12 format=3 uid="uid://b7vyk4mfl8y2s"]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
+[ext_resource type="Shader" path="res://scenes/arena_grid.gdshader" id="2_grid"]
+[ext_resource type="PackedScene" uid="uid://dmckv8s7qpl1n" path="res://scenes/hero/hero.tscn" id="3_hero"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
-sky_top_color = Color(0.384314, 0.552941, 0.74902, 1)
-sky_horizon_color = Color(0.647059, 0.741176, 0.831373, 1)
-ground_bottom_color = Color(0.2, 0.231373, 0.270588, 1)
-ground_horizon_color = Color(0.647059, 0.741176, 0.831373, 1)
+sky_top_color = Color(0.35, 0.48, 0.65, 1)
+sky_horizon_color = Color(0.6, 0.68, 0.76, 1)
+ground_bottom_color = Color(0.15, 0.18, 0.22, 1)
+ground_horizon_color = Color(0.6, 0.68, 0.76, 1)
 
 [sub_resource type="Sky" id="Sky_env"]
 sky_material = SubResource("ProceduralSkyMaterial_sky")
@@ -15,29 +17,34 @@ sky_material = SubResource("ProceduralSkyMaterial_sky")
 background_mode = 2
 sky = SubResource("Sky_env")
 ambient_light_source = 3
-ambient_light_color = Color(0.8, 0.85, 0.9, 1)
+ambient_light_color = Color(0.85, 0.9, 0.95, 1)
 tonemap_mode = 2
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
-albedo_color = Color(0.28, 0.35, 0.28, 1)
-roughness = 0.85
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ground"]
+render_priority = 0
+shader = ExtResource("2_grid")
+shader_parameter/bg_color = Color(0.12, 0.15, 0.18, 1)
+shader_parameter/grid_color = Color(0.24, 0.32, 0.42, 1)
+shader_parameter/grid_size = 2.0
+shader_parameter/line_thickness = 0.04
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
-material = SubResource("StandardMaterial3D_ground")
-size = Vector2(40, 40)
+material = SubResource("ShaderMaterial_ground")
+size = Vector2(80, 80)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
-size = Vector3(40, 0.1, 40)
+size = Vector3(80, 0.2, 80)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
-albedo_color = Color(0.3, 0.6, 0.9, 1)
-roughness = 0.4
+albedo_color = Color(0.1, 0.9, 0.6, 1)
+roughness = 0.3
 emission_enabled = true
-emission = Color(0.1, 0.25, 0.4, 1)
+emission = Color(0.1, 0.8, 0.5, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+[sub_resource type="TorusMesh" id="TorusMesh_marker"]
 material = SubResource("StandardMaterial3D_marker")
-size = Vector3(1.5, 1.5, 1.5)
+inner_radius = 0.35
+outer_radius = 0.45
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -46,14 +53,8 @@ script = ExtResource("1_main")
 environment = SubResource("Environment_world")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 10, 15, 10)
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 10, 18, 10)
 shadow_enabled = true
-
-[node name="CameraPivot" type="Node3D" parent="."]
-
-[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
-transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 16, 16)
-fov = 45.0
 
 [node name="Arena" type="Node3D" parent="."]
 
@@ -63,11 +64,23 @@ fov = 45.0
 mesh = SubResource("PlaneMesh_ground")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Arena/Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 shape = SubResource("BoxShape3D_ground")
 
-[node name="CenterMarker" type="MeshInstance3D" parent="Arena"]
-transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0, 0.75, 0)
-mesh = SubResource("BoxMesh_marker")
+[node name="TargetMarker" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+visible = false
+
+[node name="MarkerMesh" type="MeshInstance3D" parent="TargetMarker"]
+mesh = SubResource("TorusMesh_marker")
+
+[node name="Hero" parent="." instance=ExtResource("3_hero")]
+
+[node name="CameraPivot" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 16, 16)
+fov = 45.0
 
 [node name="UI" type="CanvasLayer" parent="."]
 
@@ -89,7 +102,11 @@ size_flags_vertical = 0
 
 [node name="InfoLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "game-x1 | Stage 0: Web Foundation"
+text = "game-x1 | Stage 1A: Stick Figure Movement"
+
+[node name="HelpLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Right Click on ground to move"
 
 [node name="FPSLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
 layout_mode = 2
