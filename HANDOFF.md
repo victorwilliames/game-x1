@@ -1,67 +1,57 @@
 # HANDOFF — memória operacional do game-x1
 
 **Atualizado por:** Antigravity (programador principal) em 2026-10-15  
-**Situação:** Etapa 1A Refinada concluída e validada (laboratório transformado em combat testing lane isométrica, muretas e pilastras com acentos de time ciano/vermelho, estruturas de base com cristais giratórios, anel de seleção do herói, 4 dummies inimigos, Issue #2 resolvida com raycast físico, contenção de limites, eliminação de overshoot e teste determinístico headless adicionado).  
+**Situação:** Câmera estilo League of Legends e UX de navegação implementadas e validadas (modo livre padrão, edge scrolling nas bordas, segurar Espaço para centralizar suavemente, tecla Y para travar/destravar, zoom com interpolação contínua e limites sem saltos, botão direito exclusivo para andar, botão esquerdo desabilitado para movimento, e suite de 4 testes automatizados com código 0).  
 **Branch:** `main` (pronta para commit e push).
 
-## 1. Estado da entrega (Etapa 1A Refinada)
+## 1. Estado da entrega (Câmera estilo LoL & UX de Navegação)
 
-- **verified:** Chão da arena (`scenes/arena_grid.gdshader`) refinado em tons grafite/azul-escuro (`#17202c`), com grid sutil de 2m, cruzes de vértice (+), linha pontilhada central e gradiente suave de time ao longo da rota.
-- **verified:** Muretas modulares laterais e de cabeceira com pilastras e acentos de iluminação de time (`scenes/arena/arena_walls.gd`): ciano no lado aliado e vermelho no lado inimigo.
-- **verified:** Colisores físicos completos nas bordas e extremidades da rota impedindo a saída da área jogável.
-- **verified:** Estruturas de base aliada (`scenes/arena/spire_allied.tscn`) e inimiga (`scenes/arena/spire_enemy.tscn`) com pedestais escalonados escuros, anéis de circuito no chão e cristais flutuantes com rotação procedural (`scenes/arena/spire_structure.gd`).
-- **verified:** Quatro dummies inimigos vermelhos (`scenes/arena/dummy_enemy.tscn`, `dummy_enemy.gd`) em postura de combate com barras de vida minimalistas para referência de escala e composição.
-- **verified:** Anel de seleção circular no chão sob os pés do herói (`scenes/hero/hero.tscn`, `SelectionRing`) aumentando a legibilidade.
-- **verified (Issue #2):** Raycast físico contra o colisor real do chão (`PhysicsRayQueryParameters3D`) com clamping obrigatório nos limites da arena (`scenes/main.gd`). Clicks no vazio/céu são ignorados com segurança.
-- **verified (Issue #2):** Eliminação completa de overshoot/oscilação ao chegar no destino através de limitação de velocidade por passo (`step_speed = min(move_speed, distance / delta)`) em `scenes/hero/hero.gd`.
-- **verified (Issue #2):** Teste determinístico automatizado headless de movimento e parada (`scripts/test_movement.gd`) integrado como etapa 3/3 de `scripts/test.ps1`.
-- **verified:** Câmera isométrica elevada aproximada e configurável (yaw 45°, pitch 38°, zoom com scroll do mouse), valorizando o herói e a arena.
-- **verified:** Teste de triplo passo automatizado (`scripts/test.ps1`) executou e passou com código 0.
+- **verified:** Controlador isolado `scenes/moba_camera.gd` (`MobaCamera`) acoplado ao `CameraPivot`.
+- **verified:** Câmera livre como modo padrão (`Mode.FREE`), com enquadramento inicial centrado na posição do herói.
+- **verified:** Edge scrolling: aproximar o cursor das bordas da tela desloca a câmera suavemente no plano do chão, sem alterar yaw/pitch e com checagem de contenção dentro do canvas da janela/viewport.
+- **verified:** Segurar `Espaço` centraliza e acompanha o herói suavemente; soltar retorna à câmera livre exatamente de onde parou, sem saltos.
+- **verified:** Pressionar `Y` alterna o modo entre câmera travada (`Locked`) e câmera livre (`Free`).
+- **verified:** Scroll do mouse ajusta `target_distance` (entre 9.0m e 22.0m) e interpola suavemente com `lerp`, sem reposicionar o pivô nem causar saltos na posição do herói.
+- **verified:** Yaw (45°) e pitch (38°) permanecem fixos; movimento do pivô é delimitado aos limites da arena (`X: [-14, 14]`, `Z: [-34, 34]`).
+- **verified:** Botão direito comanda a movimentação do herói (clique único ou arrasto contínuo); botão esquerdo foi desabilitado para movimentação.
+- **verified:** HUD no topo e texto de ajuda exibem os controles e o status em tempo real da câmera (`[Free]`, `[Locked]` ou `[Free (Space Centering)]`).
+- **verified:** Teste automatizado quádruplo (`scripts/test.ps1`: Editor parse, Smoke 60 frames, Deterministic movement, e MobaCamera controller checks) passou com código 0.
 - **verified:** Exportação Web (`scripts/export_web.ps1`) gerou com sucesso o pacote atualizado em `build/web/`.
 - **verified:** Servidor local HTTP (`scripts/serve_web.ps1`) ativo em segundo plano na porta 8080 com headers COOP/COEP.
-- **pending (validação humana):** Playtest do visual refinado e movimentação no navegador em `http://localhost:8080/`.
+- **pending (validação humana):** Playtest dos controles de câmera no navegador em `http://localhost:8080/`.
 
 ## 2. Arquivos alterados / criados
 
-- `scenes/arena_grid.gdshader`: shader da grade de laboratório refinado (grid fino, cruzes, linha pontilhada, gradiente).
-- `scenes/arena/arena_walls.gd`: gerador modular de muretas, pilastras com acentos de time e colisores físicos.
-- `scenes/arena/spire_structure.gd`: controlador de rotação e flutuação dos cristais de base.
-- `scenes/arena/spire_allied.tscn`: estrutura de base aliada com cristal ciano.
-- `scenes/arena/spire_enemy.tscn`: estrutura de base inimiga com cristal vermelho.
-- `scenes/arena/dummy_enemy.gd`: postura de combate e respiração suave dos dummies.
-- `scenes/arena/dummy_enemy.tscn`: boneco-palito vermelho com barra de vida minimalista.
-- `scenes/hero/hero.gd`: correção de overshoot de física e clamping de chegada.
-- `scenes/hero/hero.tscn`: anel de seleção ciano sob os pés do herói.
-- `scenes/main.gd`: raycast físico com clamping de limites e câmera isométrica com zoom por scroll.
-- `scenes/main.tscn`: composição da arena de testes com chão, muretas, spires, dummies e herói.
-- `scripts/test_movement.gd`: teste determinístico headless de navegação e parada.
-- `scripts/test.ps1`: inclusão do teste determinístico (3 passos).
+- `scenes/moba_camera.gd`: controlador isolado e reutilizável da câmera MOBA (livre, travada, edge pan, espaço, zoom e limites).
+- `scenes/main.gd`: delegação de atalhos da câmera, restrição exclusiva de clique direito para mover e atualização do HUD.
+- `scenes/main.tscn`: associação do script `MobaCamera` ao nó `CameraPivot` e ajuste de labels de ajuda.
+- `scripts/test_camera.gd`: teste automatizado headless cobrindo estados da câmera, atalhos, zoom, clamping e foco do Espaço.
+- `scripts/test.ps1`: inclusão do 4º passo de teste automatizado para a câmera.
 - `PROGRESS.md`: histórico de marcos atualizado.
-- `HANDOFF.md`: memória operacional atualizada.
+- `HANDOFF.md`: esta memória operacional.
 
 ## 3. Comandos executados e evidências
 
 1. `powershell -ExecutionPolicy Bypass -File .\scripts\test.ps1`
-   - *Resultado:* Exit code 0 (1/3 Editor parse, 2/3 Runtime smoke check 60 frames, 3/3 Headless deterministic movement check com chegada exata e retorno a IDLE).
+   - *Resultado:* Exit code 0 (1/4 Editor parse, 2/4 Smoke check 60 frames, 3/4 Deterministic movement check, 4/4 MobaCamera controller checks: Free default, Y toggle, Space centering, Zoom limits, Arena clamping, Event handling).
 2. `powershell -ExecutionPolicy Bypass -File .\scripts\export_web.ps1`
    - *Resultado:* Exit code 0 (`index.wasm`, `index.pck` e assets empacotados com sucesso).
 3. `C:\Windows\System32\curl.exe -s -I "http://localhost:8080/"`
    - *Resultado:* HTTP/1.1 200 OK com isolamento de headers e servidor ativo.
 
-## 4. Como abrir e validar
+## 4. Checklist de testes manuais no navegador (Web)
 
-- **No navegador (Web):**
-  Servidor ativo na porta 8080:
-  Acesse **`http://localhost:8080/`** (tecle `Ctrl+Shift+R` ou `F5`).
-  - *Interação:*
-    - Clique com o botão direito para mover o herói na lane.
-    - Use a roda do mouse (Scroll Wheel) para aproximar ou afastar a câmera.
-    - Teste cliques na lane, nas bordas e fora da tela para verificar a restrição de limites.
-- **Nativo (Windows Desktop):**
-  ```powershell
-  powershell -ExecutionPolicy Bypass -File .\scripts\run.ps1
-  ```
+Acesse **`http://localhost:8080/`** (tecle `Ctrl+Shift+R` para limpar cache antigo):
+
+1. **Câmera livre padrão:** Ao carregar, a câmera inicia centrada no herói, mas em modo `[Free]`. Mover o herói para longe não arrasta a câmera automaticamente.
+2. **Edge Pan:** Mova o cursor até as bordas (superior, inferior, esquerda, direita). A câmera deve deslizar suavemente pelo cenário sem girar a perspectiva.
+3. **Segurar Espaço:** Com a câmera afastada do herói, aperte e segure a barra de `Espaço`. A câmera deve voar suavemente até o herói e acompanhá-lo enquanto a tecla estiver pressionada (`Cam: [Free (Space Centering)]`). Ao soltar o Espaço, a câmera deve parar suavemente onde está, sem saltos.
+4. **Tecla Y:** Pressione `Y`. O HUD deve alternar para `Cam: [Locked]`, e a câmera passará a seguir o herói continuamente. Pressione `Y` novamente para retornar a `Cam: [Free]`.
+5. **Scroll do mouse (Zoom):** Use a roda do mouse para aproximar e afastar. O zoom deve ser contínuo e suave, sem reposicionar o centro da câmera no herói.
+6. **Cliques do mouse:**
+   - **Botão direito:** Clicar ou arrastar com o botão direito pressionado move o herói pela rota.
+   - **Botão esquerdo:** Clicar com o botão esquerdo não deve emitir ordens de movimento.
 
 ## 5. Próxima ação recomendada
 
-Após validação visual do novo visual de combat testing lane pelo usuário e tech lead, avançar para a **Etapa 1B** (esquiva mecânica no Shift com cooldown, deslocamento rápido e feedback visual).
+Após validação da experiência de câmera pelo usuário e tech lead, avançar para a **Etapa 1B** (esquiva mecânica no Shift com cooldown, deslocamento rápido e feedback visual).

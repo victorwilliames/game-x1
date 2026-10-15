@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://b7vyk4mfl8y2s"]
+[gd_scene load_steps=16 format=3 uid="uid://b7vyk4mfl8y2s"]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
 [ext_resource type="Shader" path="res://scenes/arena_grid.gdshader" id="2_grid"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://c7w3px2mv8k9q" path="res://scenes/arena/spire_allied.tscn" id="5_spire_allied"]
 [ext_resource type="PackedScene" uid="uid://b2s5v9x7m4q1r" path="res://scenes/arena/spire_enemy.tscn" id="6_spire_enemy"]
 [ext_resource type="PackedScene" uid="uid://c3m7kd8w2qp5x" path="res://scenes/arena/dummy_enemy.tscn" id="7_dummy"]
+[ext_resource type="Script" path="res://scenes/moba_camera.gd" id="8_moba_camera"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.12, 0.16, 0.22, 1)
@@ -108,8 +109,10 @@ mesh = SubResource("TorusMesh_marker")
 [node name="Hero" parent="." instance=ExtResource("3_hero")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 16)
 
-[node name="CameraPivot" type="Node3D" parent="."]
+[node name="CameraPivot" type="Node3D" parent="." node_paths=PackedStringArray("target")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 16)
+script = ExtResource("8_moba_camera")
+target = NodePath("../Hero")
 
 [node name="Camera3D" type="Camera3D" parent="CameraPivot"]
 transform = Transform3D(0.707107, -0.435779, 0.55667, 0, 0.788011, 0.615661, -0.707107, -0.435332, 0.557242, 9.54, 8.31, 9.54)
@@ -139,7 +142,7 @@ text = "game-x1 | Combat Testing Lane"
 
 [node name="HelpLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Right Click on lane to move | Scroll to zoom | Allied (Blue) vs Enemy (Red)"
+text = "Right Click: Move | Edge Pan: Move Cam | Space (Hold): Center | Y: Lock/Unlock | Scroll: Zoom"
 
 [node name="FPSLabel" type="Label" parent="UI/MarginContainer/VBoxContainer"]
 layout_mode = 2

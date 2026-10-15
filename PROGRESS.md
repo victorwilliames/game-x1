@@ -1,7 +1,7 @@
 # Progresso — game-x1
 
 **Atualizado:** 2026-10-15  
-**Fase:** Etapa 1A refinada (arena isométrica estilo combat testing lane, muretas e pilastras com acentos de time, estruturas de base com cristais, anel de seleção do herói, 4 dummies inimigos, correção da Issue #2 de clique e overshoot, e teste determinístico headless).  
+**Fase:** Câmera estilo League of Legends e UX de navegação implementadas (câmera livre padrão, edge pan, Space para centralizar, tecla Y para alternar trava, zoom suave com limites, clique direito exclusivo para andar e testes automatizados de câmera).  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
 ## Situação verificada
@@ -17,12 +17,18 @@
 - [x] Animações procedurais nativas de `Idle` (respiração) e `Run` (passadas e braços alternados) sincronizadas com a velocidade horizontal.
 - [x] Anel de seleção circular no chão sob os pés do herói (`SelectionRing`, ciano emissivo).
 - [x] Movimentação por clique no chão com raycast físico restrito à arena e sem overshoot (`step_speed = min(move_speed, distance / delta)`).
-- [x] Teste determinístico automatizado de movimentação e chegada precisa sem oscilação (`scripts/test_movement.gd` incluído no `scripts/test.ps1`).
-- [x] Câmera isométrica aproximada e configurável (yaw 45°, pitch 38°, zoom com scroll do mouse), valorizando o herói e a arena.
-- [x] Shader de chão de laboratório refinado com grid sutil, cruzes nos vértices, linha pontilhada central e gradiente suave de time.
-- [x] Limites da arena e muretas modulares com pilastras e acentos de iluminação de time (ciano no lado aliado, vermelho no lado inimigo).
-- [x] Estruturas de base com pedestal escalonado escuro e cristais flutuantes com rotação (ciano aliado / vermelho inimigo).
-- [x] Quatro dummies de teste inimigos vermelhos em postura de combate com barras de vida simples para referência de escala e composição.
+- [x] Teste determinístico automatizado de movimentação e chegada precisa sem oscilação (`scripts/test_movement.gd`).
+- [x] Controlador de câmera isolado estilo LoL (`scenes/moba_camera.gd`, `MobaCamera`):
+  - Câmera livre como modo padrão, centrada inicialmente no herói.
+  - Edge scrolling nas bordas da janela sem rotação de perspectiva e com contenção dentro da tela.
+  - Segurar Espaço centraliza suavemente no herói; soltar retorna à câmera livre no local atual sem saltos.
+  - Tecla Y alterna entre câmera livre e câmera travada no herói.
+  - Zoom por scroll do mouse com interpolação suave e limites (9.0m a 22.0m), sem reposicionar o pivô.
+  - Yaw e pitch fixos, com movimentação independente do herói respeitando os limites da arena.
+  - Botão direito movimenta (clique ou arrasto); botão esquerdo não comanda movimento.
+  - HUD e texto de ajuda atualizados com o modo atual da câmera `[Free]`, `[Locked]` ou `[Free (Space Centering)]`.
+- [x] Testes automatizados quádruplos (`scripts/test.ps1`: Editor parse, Smoke check 60 frames, Deterministic movement e Camera controller checks).
+- [x] Arena isométrica escura com muretas, pilastras, spires de time e 4 dummies inimigos de teste.
 
 ## Próximos incrementos
 
@@ -35,8 +41,9 @@
 
 **1. Herói e movimentação**
 - [x] (1A) Boneco-palito 3D articulado com segmentos/juntas visíveis, Idle e Run (visual de desenvolvimento, sem arte final).
-- [x] (1A) Clique para mover com botão direito, rotação coerente e câmera acompanhando suavemente.
-- [x] (1A Refinada) Arena isométrica escura com muretas, pilastras, spires de time, 4 dummies inimigos, anel de seleção e resolução da Issue #2.
+- [x] (1A) Clique para mover com botão direito, rotação coerente e parada sem overshoot.
+- [x] (1A Refinada) Arena isométrica escura com muretas, pilastras, spires de time, 4 dummies inimigos e anel de seleção.
+- [x] (UX/Câmera) Câmera estilo League of Legends (livre por padrão, edge pan, Espaço, Y, zoom suave, limites e HUD).
 - [ ] (1B) Esquiva (Shift) com animação, cooldown e colisão.
 
 **2. Combate básico**
@@ -61,4 +68,4 @@
 
 Registrar por incremento: commit, funcionalidade jogável, comando/teste executado, resultado, captura real (quando visual) e limitações. Não reportar aprovação estética sem playtest humano.
 
-**Próxima tarefa para o Antigravity:** Após validação humana da nova arena e movimentação no navegador, implementar a Etapa 1B (esquiva no Shift com recarga e rastro/feedback visual).
+**Próxima tarefa para o Antigravity:** Após validação humana da nova navegação de câmera no navegador, implementar a Etapa 1B (esquiva no Shift com recarga e rastro/feedback visual).
