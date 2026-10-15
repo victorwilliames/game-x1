@@ -1,8 +1,8 @@
 # HANDOFF — memória operacional do game-x1
 
 **Atualizado por:** Antigravity (programador principal) em 2026-10-15  
-**Situação:** Etapa 0 concluída e revisada (ajustes da Issue #1 aplicados); aguardando validação visual humana da versão Web.  
-**Último commit publicado:** `5ab2781` (ajustes da Issue #1 prontos para novo commit/push).
+**Situação:** Etapa 0 concluída e revisada (ajustes da Issue #1 aplicados); prova visual inicial Web confirmada por captura do usuário; pronta para iniciar Etapa 1A.  
+**Último commit de código auditado:** `5781658` (Issue #1 corrigida e publicada).
 
 ## 1. Estado da entrega (Etapa 0 + Issue #1)
 
@@ -13,7 +13,7 @@
 - **verified:** Exportação Web (`scripts/export_web.ps1`) gera `build/web/` sem erros.
 - **verified (Issue #1):** `scripts/serve_web.ps1` protegido com validação canônica de caminho contra path traversal (`..`, `%2e%2e`) e remoção de `Access-Control-Allow-Origin: *`.
 - **verified (Issue #1):** `README.md` atualizado para refletir que o projeto Godot 4 da Etapa 0 foi criado e está em validação.
-- **pending (validação humana):** Playtest e inspeção visual da cena aberta no navegador em `http://localhost:8080/`.
+- **verified (captura do usuário):** cena 3D, câmera inclinada, cubo e sombra, HUD e cerca de 60 FPS no Chrome (`localhost:8080`). A captura não confirma movimento do cubo nem ausência de erros no console.
 
 ## 2. Arquivos alterados
 
@@ -52,4 +52,4 @@
 
 ## 5. Próxima ação recomendada
 
-Após o usuário validar visualmente no navegador que a cena 3D carregou (chão, cubo em rotação e FPS visíveis), avançar para a **Etapa 1** (boneco-palito 3D articulado de desenvolvimento, Idle/Run e controle de movimentação por clique).
+Iniciar **Etapa 1A**, somente boneco-palito 3D articulado, Idle/Run, clique direito para movimentar e câmera acompanhando. Testar Web e registrar no HANDOFF/PROGRESS. Esquiva e habilidades ficam para depois.
