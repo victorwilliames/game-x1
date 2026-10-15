@@ -12,15 +12,35 @@ if (-not (Test-Path "$webDir\index.html")) {
     & "$PSScriptRoot\export_web.ps1"
 }
 
-# Canonical root directory path with trailing separator for traversal check
+$url = "http://localhost:$Port/"
+
+if ($OpenBrowser) {
+    Start-Process $url
+}
+
+# If python is available, use Python's ThreadingHTTPServer for fast, multi-threaded serving
+$hasPython = $null
+try {
+    $hasPython = Get-Command python -ErrorAction SilentlyContinue
+} catch {}
+
+if ($hasPython) {
+    $servePy = Join-Path $PSScriptRoot "serve.py"
+    if (Test-Path $servePy) {
+        & python "$servePy" $Port "$webDir"
+        exit $LASTEXITCODE
+    }
+}
+
+# Fallback to PowerShell HttpListener
 $canonicalWebDir = [System.IO.Path]::GetFullPath($webDir)
 if (-not $canonicalWebDir.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString())) {
     $canonicalWebDir += [System.IO.Path]::DirectorySeparatorChar
 }
 
-$url = "http://localhost:$Port/"
 $listener = New-Object System.Net.HttpListener
-$listener.Prefixes.Add($url)
+$listener.Prefixes.Add("http://localhost:$Port/")
+$listener.Prefixes.Add("http://127.0.0.1:$Port/")
 
 try {
     $listener.Start()
@@ -34,10 +54,6 @@ Write-Host "  game-x1 Web Server running at: $url"
 Write-Host "  Serving: $canonicalWebDir"
 Write-Host "  Press Ctrl+C in terminal to stop server."
 Write-Host "===================================================="
-
-if ($OpenBrowser) {
-    Start-Process $url
-}
 
 $mimeTypes = @{
     ".html" = "text/html; charset=utf-8"
@@ -62,13 +78,9 @@ try {
             $rawRelative = "index.html"
         }
 
-        # URL-decode to catch encoded traversal attempts (%2e%2e)
         $decodedPath = [System.Uri]::UnescapeDataString($rawRelative)
-
-        # Normalize directory separators
         $normalizedPath = $decodedPath.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
 
-        # Security/headers for WebAssembly & Godot
         $response.AddHeader("Cross-Origin-Opener-Policy", "same-origin")
         $response.AddHeader("Cross-Origin-Embedder-Policy", "require-corp")
         $response.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -76,7 +88,6 @@ try {
         $response.AddHeader("Expires", "0")
 
         try {
-            # Reject direct traversal patterns before resolving
             if ($decodedPath -match '(\.\.[\\/])|([\\/]\.\.)|(\.\.$)') {
                 $response.StatusCode = 403
                 $msg = [System.Text.Encoding]::UTF8.GetBytes("403 - Forbidden")
@@ -87,7 +98,6 @@ try {
                 continue
             }
 
-            # Canonical path resolution & containment check
             $combinedPath = [System.IO.Path]::Combine($canonicalWebDir, $normalizedPath)
             $canonicalFilePath = [System.IO.Path]::GetFullPath($combinedPath)
 
