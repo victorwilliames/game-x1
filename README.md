@@ -12,7 +12,7 @@ Criar **um protótipo 1v1 realmente jogável e divertido**, mesmo com arte inici
 
 ## Situação
 
-**Planejamento inicial.** Ainda não foi criado ou testado um projeto Godot neste repositório. Não confunda esta documentação com um protótipo funcional.
+**Etapa 0 implementada (fundação e prova Web).** Projeto Godot 4 criado com renderizador Compatibility, cena 3D de desenvolvimento (chão, iluminação com sombras, marcador central e câmera inclinada), exportação Web funcional e scripts de automação CLI (`run.ps1`, `test.ps1`, `export_web.ps1`, `serve_web.ps1`). Pendente de validação visual humana no navegador antes da Etapa 1.
 
 ## Documentos
 

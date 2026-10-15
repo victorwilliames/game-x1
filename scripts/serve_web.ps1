@@ -12,6 +12,12 @@ if (-not (Test-Path "$webDir\index.html")) {
     & "$PSScriptRoot\export_web.ps1"
 }
 
+# Canonical root directory path with trailing separator for traversal check
+$canonicalWebDir = [System.IO.Path]::GetFullPath($webDir)
+if (-not $canonicalWebDir.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString())) {
+    $canonicalWebDir += [System.IO.Path]::DirectorySeparatorChar
+}
+
 $url = "http://localhost:$Port/"
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add($url)
@@ -25,7 +31,7 @@ try {
 
 Write-Host "===================================================="
 Write-Host "  game-x1 Web Server running at: $url"
-Write-Host "  Serving: $webDir"
+Write-Host "  Serving: $canonicalWebDir"
 Write-Host "  Press Ctrl+C in terminal to stop server."
 Write-Host "===================================================="
 
@@ -51,30 +57,56 @@ try {
         $request = $context.Request
         $response = $context.Response
 
-        $rawPath = $request.Url.LocalPath.TrimStart('/')
-        if ([string]::IsNullOrEmpty($rawPath) -or $rawPath -eq "") {
-            $rawPath = "index.html"
+        $rawRelative = $request.Url.LocalPath.TrimStart('/')
+        if ([string]::IsNullOrEmpty($rawRelative) -or $rawRelative -eq "") {
+            $rawRelative = "index.html"
         }
 
-        # sanitize path
-        $rawPath = $rawPath.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
-        $filePath = Join-Path $webDir $rawPath
+        # URL-decode to catch encoded traversal attempts (%2e%2e)
+        $decodedPath = [System.Uri]::UnescapeDataString($rawRelative)
+
+        # Normalize directory separators
+        $normalizedPath = $decodedPath.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
 
         # Security/headers for WebAssembly & Godot
         $response.AddHeader("Cross-Origin-Opener-Policy", "same-origin")
         $response.AddHeader("Cross-Origin-Embedder-Policy", "require-corp")
-        $response.AddHeader("Access-Control-Allow-Origin", "*")
 
         try {
-            if (Test-Path $filePath -PathType Leaf) {
-                $ext = [System.IO.Path]::GetExtension($filePath).ToLower()
+            # Reject direct traversal patterns before resolving
+            if ($decodedPath -match '(\.\.[\\/])|([\\/]\.\.)|(\.\.$)') {
+                $response.StatusCode = 403
+                $msg = [System.Text.Encoding]::UTF8.GetBytes("403 - Forbidden")
+                $response.ContentLength64 = $msg.Length
+                if ($request.HttpMethod -ne "HEAD") {
+                    $response.OutputStream.Write($msg, 0, $msg.Length)
+                }
+                continue
+            }
+
+            # Canonical path resolution & containment check
+            $combinedPath = [System.IO.Path]::Combine($canonicalWebDir, $normalizedPath)
+            $canonicalFilePath = [System.IO.Path]::GetFullPath($combinedPath)
+
+            if (-not $canonicalFilePath.StartsWith($canonicalWebDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $response.StatusCode = 403
+                $msg = [System.Text.Encoding]::UTF8.GetBytes("403 - Forbidden")
+                $response.ContentLength64 = $msg.Length
+                if ($request.HttpMethod -ne "HEAD") {
+                    $response.OutputStream.Write($msg, 0, $msg.Length)
+                }
+                continue
+            }
+
+            if (Test-Path $canonicalFilePath -PathType Leaf) {
+                $ext = [System.IO.Path]::GetExtension($canonicalFilePath).ToLower()
                 $mime = "application/octet-stream"
                 if ($mimeTypes.ContainsKey($ext)) {
                     $mime = $mimeTypes[$ext]
                 }
                 $response.ContentType = $mime
 
-                $bytes = [System.IO.File]::ReadAllBytes($filePath)
+                $bytes = [System.IO.File]::ReadAllBytes($canonicalFilePath)
                 $response.ContentLength64 = $bytes.Length
                 $response.StatusCode = 200
 
@@ -90,7 +122,7 @@ try {
                 }
             }
         } catch {
-            Write-Warning "Error processing request for $($rawPath): $_"
+            Write-Warning "Error processing request for $($decodedPath): $_"
         } finally {
             $response.OutputStream.Close()
         }
