@@ -1,7 +1,7 @@
 # Progresso — game-x1
 
 **Atualizado:** 2026-10-15  
-**Fase:** Câmera estilo League of Legends e UX de navegação implementadas (câmera livre padrão, edge pan, Space para centralizar, tecla Y para alternar trava, zoom suave com limites, clique direito exclusivo para andar e testes automatizados de câmera).  
+**Fase:** Experiência Web em modo janela e controles de câmera aprimorados (edge scrolling responsivo para janela/canvas, arrasto por botão do meio MMB, prevenção de scroll de página em Espaço/Wheel, suporte a redimensionamento e 8 testes automatizados de câmera).  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
 ## Situação verificada
@@ -20,14 +20,16 @@
 - [x] Teste determinístico automatizado de movimentação e chegada precisa sem oscilação (`scripts/test_movement.gd`).
 - [x] Controlador de câmera isolado estilo LoL (`scenes/moba_camera.gd`, `MobaCamera`):
   - Câmera livre como modo padrão, centrada inicialmente no herói.
-  - Edge scrolling nas bordas da janela sem rotação de perspectiva e com contenção dentro da tela.
+  - Edge scrolling responsivo proporcional ao tamanho da janela (5% largura, 7% altura, min 36px, max 80px) com aceleração gradual, funcionando perfeitamente em modo janela sem encostar na borda física do monitor.
+  - Navegação alternativa por arrasto com o botão do meio do mouse (MMB Drag-scroll), sem exigir fullscreen ou pointer lock.
   - Segurar Espaço centraliza suavemente no herói; soltar retorna à câmera livre no local atual sem saltos.
   - Tecla Y alterna entre câmera livre e câmera travada no herói.
   - Zoom por scroll do mouse com interpolação suave e limites (9.0m a 22.0m), sem reposicionar o pivô.
   - Yaw e pitch fixos, com movimentação independente do herói respeitando os limites da arena.
-  - Botão direito movimenta (clique ou arrasto); botão esquerdo não comanda movimento.
-  - HUD e texto de ajuda atualizados com o modo atual da câmera `[Free]`, `[Locked]` ou `[Free (Space Centering)]`.
-- [x] Testes automatizados quádruplos (`scripts/test.ps1`: Editor parse, Smoke check 60 frames, Deterministic movement e Camera controller checks).
+  - Botão direito exclusivo para movimentar (clique ou arrasto); botão esquerdo não comanda movimento.
+  - Prevenção de rolagem de página no navegador via script em `export_presets.cfg` (`html/head_include`) e `JavaScriptBridge` em `main.gd` (Espaço e Wheel interceptados sobre o canvas; navegação normal preservada fora da área do jogo).
+  - HUD e texto de ajuda atualizados com o modo atual da câmera `[Free]`, `[Locked]`, `[Panning (MMB)]` ou `[Free (Space Centering)]`.
+- [x] Testes automatizados quádruplos (`scripts/test.ps1`: Editor parse, Smoke check 60 frames, Deterministic movement e 8 verificações do Camera controller).
 - [x] Arena isométrica escura com muretas, pilastras, spires de time e 4 dummies inimigos de teste.
 
 ## Próximos incrementos
@@ -43,7 +45,7 @@
 - [x] (1A) Boneco-palito 3D articulado com segmentos/juntas visíveis, Idle e Run (visual de desenvolvimento, sem arte final).
 - [x] (1A) Clique para mover com botão direito, rotação coerente e parada sem overshoot.
 - [x] (1A Refinada) Arena isométrica escura com muretas, pilastras, spires de time, 4 dummies inimigos e anel de seleção.
-- [x] (UX/Câmera) Câmera estilo League of Legends (livre por padrão, edge pan, Espaço, Y, zoom suave, limites e HUD).
+- [x] (UX/Câmera) Câmera estilo League of Legends com otimização completa para modo janela Web (edge pan responsivo, MMB drag, Espaço sem scroll de página, Y, zoom suave, limites e HUD).
 - [ ] (1B) Esquiva (Shift) com animação, cooldown e colisão.
 
 **2. Combate básico**
@@ -68,4 +70,4 @@
 
 Registrar por incremento: commit, funcionalidade jogável, comando/teste executado, resultado, captura real (quando visual) e limitações. Não reportar aprovação estética sem playtest humano.
 
-**Próxima tarefa para o Antigravity:** Após validação humana da nova navegação de câmera no navegador, implementar a Etapa 1B (esquiva no Shift com recarga e rastro/feedback visual).
+**Próxima tarefa para o Antigravity:** Após validação humana da navegação de câmera na janela do navegador, implementar a Etapa 1B (esquiva no Shift com recarga e rastro/feedback visual).

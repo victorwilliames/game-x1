@@ -127,5 +127,53 @@ func _run_test() -> void:
 		quit(1)
 		return
 
-	print("[test_camera] SUCCESS: All camera controller checks passed cleanly!")
+	# Reset mode to FREE
+	cam.set_mode(MobaCamera.Mode.FREE)
+
+	# 7. Middle Mouse Button (MMB) Drag Navigation
+	print("[test_camera] Check 7: Middle Mouse Drag (MMB) panning...")
+	cam.global_position = Vector3(0, 0, 0)
+	var mmb_press = InputEventMouseButton.new()
+	mmb_press.button_index = MOUSE_BUTTON_MIDDLE
+	mmb_press.pressed = true
+	var handled_mmb = cam.handle_input(mmb_press)
+	if not handled_mmb or not cam.is_mmb_dragging:
+		printerr("[test_camera] FAILED: MMB press did not start drag")
+		quit(1)
+		return
+
+	if cam.get_mode_name() != "Panning (MMB)":
+		printerr("[test_camera] FAILED: Expected mode name 'Panning (MMB)', got '%s'" % cam.get_mode_name())
+		quit(1)
+		return
+
+	var mouse_motion = InputEventMouseMotion.new()
+	mouse_motion.relative = Vector2(80.0, -40.0)
+	var handled_motion = cam.handle_input(mouse_motion)
+	if not handled_motion or cam.global_position == Vector3.ZERO:
+		printerr("[test_camera] FAILED: Mouse motion during MMB drag did not move camera pivot")
+		quit(1)
+		return
+
+	var mmb_release = InputEventMouseButton.new()
+	mmb_release.button_index = MOUSE_BUTTON_MIDDLE
+	mmb_release.pressed = false
+	cam.handle_input(mmb_release)
+	if cam.is_mmb_dragging:
+		printerr("[test_camera] FAILED: MMB release did not stop drag")
+		quit(1)
+		return
+
+	# 8. Responsive Edge Margins
+	print("[test_camera] Check 8: Responsive edge margin bounds...")
+	var test_vp_width = 1280.0
+	var test_vp_height = 720.0
+	var calc_margin_x = clamp(test_vp_width * cam.edge_margin_ratio_x, cam.edge_margin_min_px, cam.edge_margin_max_px)
+	var calc_margin_y = clamp(test_vp_height * cam.edge_margin_ratio_y, cam.edge_margin_min_px, cam.edge_margin_max_px)
+	if calc_margin_x < 36.0 or calc_margin_y < 36.0:
+		printerr("[test_camera] FAILED: Responsive margins too narrow for windowed mode: (%f, %f)" % [calc_margin_x, calc_margin_y])
+		quit(1)
+		return
+
+	print("[test_camera] SUCCESS: All 8 camera controller checks passed cleanly!")
 	quit(0)

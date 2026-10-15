@@ -35,17 +35,49 @@ func _ready() -> void:
 	if not is_headless:
 		var renderer_name = ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown")
 		info_label.text = "game-x1 | Combat Testing Lane\nRenderer: %s | Platform: %s" % [renderer_name, OS.get_name()]
-		help_label.text = "Right Click: Move | Edge Pan: Move Cam | Space (Hold): Center | Y: Lock/Unlock | Scroll: Zoom"
+		help_label.text = "Right Click: Move | Edge Pan / MMB Drag: Move Cam | Space (Hold): Center | Y: Lock | Scroll: Zoom"
 		if target_marker:
 			target_marker.visible = false
 
+		# Web-specific integration for windowed browser play (prevents space & wheel from scrolling webpage)
+		if OS.has_feature("web"):
+			_install_web_scroll_preventer()
+
 	print("[game-x1] Main scene ready. Platform: %s, Headless: %s" % [OS.get_name(), str(is_headless)])
+
+func _install_web_scroll_preventer() -> void:
+	if not OS.has_feature("web"):
+		return
+	var js_code = """
+	(function() {
+		if (window._godot_web_scroll_guard) return;
+		window._godot_web_scroll_guard = true;
+		function isCanvasTarget(e) {
+			var canvas = document.getElementById('canvas');
+			return canvas && (e.target === canvas || canvas.contains(e.target));
+		}
+		window.addEventListener('keydown', function(e) {
+			if (e.code === 'Space' || e.keyCode === 32) {
+				var canvas = document.getElementById('canvas');
+				if (document.activeElement === canvas || document.activeElement === document.body || isCanvasTarget(e)) {
+					e.preventDefault();
+				}
+			}
+		}, { passive: false });
+		window.addEventListener('wheel', function(e) {
+			if (isCanvasTarget(e)) {
+				e.preventDefault();
+			}
+		}, { passive: false });
+	})();
+	"""
+	JavaScriptBridge.eval(js_code)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if is_headless or not hero:
 		return
 
-	# 1. Camera controller handles Space, Y and Scroll Wheel
+	# 1. Camera controller handles Space, Y, MMB Drag and Scroll Wheel
 	if camera_controller and camera_controller.handle_input(event):
 		return
 
@@ -65,7 +97,7 @@ func _order_movement_at_screen_pos(screen_pos: Vector2) -> void:
 		return
 	var active_cam = camera_controller.camera
 
-	# Physics raycast against actual arena ground collider
+	# Physics raycast against actual arena ground collider (Issue #2 fix)
 	var space_state = get_world_3d().direct_space_state
 	var ray_origin = active_cam.project_ray_origin(screen_pos)
 	var ray_dir = active_cam.project_ray_normal(screen_pos)

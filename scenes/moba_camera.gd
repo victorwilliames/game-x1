@@ -9,7 +9,7 @@ enum Mode {
 @export var target: Node3D
 @export var current_mode: Mode = Mode.FREE
 
-# Framing parameters
+# Framing parameters (League of Legends style isometric angle)
 @export var camera_pitch_deg: float = 38.0
 @export var camera_yaw_deg: float = 45.0
 @export var camera_fov: float = 40.0
@@ -21,10 +21,17 @@ enum Mode {
 @export var zoom_step: float = 1.5
 @export var zoom_lerp_speed: float = 10.0
 
-# Edge panning settings
+# Edge panning settings (responsive for windowed browser mode)
 @export var edge_scroll_enabled: bool = true
-@export var edge_margin_px: float = 24.0
-@export var pan_speed: float = 18.0
+@export var edge_margin_ratio_x: float = 0.05 # 5% of viewport width
+@export var edge_margin_ratio_y: float = 0.07 # 7% of viewport height (more generous vertically)
+@export var edge_margin_min_px: float = 36.0
+@export var edge_margin_max_px: float = 80.0
+@export var pan_speed: float = 20.0
+
+# Middle Mouse Button Drag (alternative MOBA camera navigation)
+@export var mmb_drag_enabled: bool = true
+@export var mmb_drag_sensitivity: float = 1.0
 
 # Smooth follow speed
 @export var follow_speed: float = 7.0
@@ -40,6 +47,7 @@ enum Mode {
 var current_distance: float = 13.5
 var target_distance: float = 13.5
 var is_space_held: bool = false
+var is_mmb_dragging: bool = false
 var is_headless: bool = false
 
 # Normalized direction from pivot to camera
@@ -97,7 +105,7 @@ func _apply_camera_offset() -> void:
 func handle_input(event: InputEvent) -> bool:
 	var handled = false
 
-	# Key inputs: Space (Hold to follow) and Y (Toggle Lock)
+	# 1. Key inputs: Space (Hold to follow) and Y (Toggle Lock)
 	if event is InputEventKey and not event.echo:
 		if event.keycode == KEY_SPACE:
 			is_space_held = event.pressed
@@ -107,14 +115,27 @@ func handle_input(event: InputEvent) -> bool:
 			toggle_lock()
 			handled = true
 
-	# Mouse wheel for smooth zoom
-	elif event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom_in()
+	# 2. Mouse buttons: MMB drag & Scroll zoom
+	elif event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_MIDDLE:
+			is_mmb_dragging = event.pressed
+			emit_signal("camera_mode_changed", current_mode, get_mode_name())
 			handled = true
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom_out()
-			handled = true
+		elif event.pressed:
+			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				zoom_in()
+				handled = true
+			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				zoom_out()
+				handled = true
+
+	# 3. Mouse motion for MMB drag pan (alternative MOBA navigation without pointer lock)
+	elif event is InputEventMouseMotion and is_mmb_dragging and mmb_drag_enabled:
+		var drag_scale = (current_distance / 600.0) * mmb_drag_sensitivity
+		var drag_world = (-cam_screen_right * event.relative.x + cam_screen_fwd * event.relative.y) * drag_scale
+		global_position += drag_world
+		_clamp_pivot_position()
+		handled = true
 
 	return handled
 
@@ -140,6 +161,8 @@ func is_following_hero() -> bool:
 	return is_space_held or current_mode == Mode.LOCKED
 
 func get_mode_name() -> String:
+	if is_mmb_dragging:
+		return "Panning (MMB)"
 	if is_space_held:
 		return "Free (Space Centering)" if current_mode == Mode.FREE else "Locked"
 	return "Locked" if current_mode == Mode.LOCKED else "Free"
@@ -164,21 +187,27 @@ func _update_zoom(delta: float) -> void:
 		emit_signal("zoom_changed", current_distance)
 
 func _update_position(delta: float) -> void:
-	# Priority 1: Follow target if locked or Space is held
+	# Priority 1: MMB Drag has manual control
+	if is_mmb_dragging:
+		return
+
+	# Priority 2: Follow target if locked or Space is held
 	if is_following_hero() and target:
 		var target_pos = target.global_position
 		target_pos.y = 0.0
-		# Faster snap if space is freshly pressed, smooth otherwise
 		var speed = follow_speed * (1.5 if is_space_held else 1.0)
 		global_position = global_position.lerp(target_pos, delta * speed)
 		_clamp_pivot_position()
 		return
 
-	# Priority 2: Edge pan in Free mode
+	# Priority 3: Edge pan in Free mode
 	if current_mode == Mode.FREE and edge_scroll_enabled:
 		_process_edge_pan(delta)
 
 func _process_edge_pan(delta: float) -> void:
+	if is_headless:
+		return
+
 	var vp = get_viewport()
 	if not vp:
 		return
@@ -186,25 +215,30 @@ func _process_edge_pan(delta: float) -> void:
 	var vp_rect = vp.get_visible_rect()
 	var mouse_pos = vp.get_mouse_position()
 
-	# Safety check: cursor must be inside game window / canvas
+	# Safety check: cursor must be inside the game window / canvas
 	if not vp_rect.has_point(mouse_pos):
 		return
 
-	var pan_dir = Vector2.ZERO
-	if mouse_pos.x <= edge_margin_px:
-		pan_dir.x -= 1.0
-	elif mouse_pos.x >= vp_rect.size.x - edge_margin_px:
-		pan_dir.x += 1.0
+	# Responsive margins tailored for browser windowed mode (prevents cursor from exiting canvas)
+	var margin_x = clamp(vp_rect.size.x * edge_margin_ratio_x, edge_margin_min_px, edge_margin_max_px)
+	var margin_y = clamp(vp_rect.size.y * edge_margin_ratio_y, edge_margin_min_px, edge_margin_max_px)
 
-	if mouse_pos.y <= edge_margin_px:
-		pan_dir.y += 1.0 # Screen up
-	elif mouse_pos.y >= vp_rect.size.y - edge_margin_px:
-		pan_dir.y -= 1.0 # Screen down
+	var pan_factor_x: float = 0.0
+	if mouse_pos.x < margin_x:
+		pan_factor_x = -clamp((margin_x - mouse_pos.x) / margin_x, 0.0, 1.0)
+	elif mouse_pos.x > vp_rect.size.x - margin_x:
+		pan_factor_x = clamp((mouse_pos.x - (vp_rect.size.x - margin_x)) / margin_x, 0.0, 1.0)
 
-	if pan_dir != Vector2.ZERO:
-		pan_dir = pan_dir.normalized()
-		var move_vector = (cam_screen_right * pan_dir.x) + (cam_screen_fwd * pan_dir.y)
-		global_position += move_vector * pan_speed * delta
+	var pan_factor_y: float = 0.0
+	if mouse_pos.y < margin_y:
+		pan_factor_y = clamp((margin_y - mouse_pos.y) / margin_y, 0.0, 1.0) # Up on screen
+	elif mouse_pos.y > vp_rect.size.y - margin_y:
+		pan_factor_y = -clamp((mouse_pos.y - (vp_rect.size.y - margin_y)) / margin_y, 0.0, 1.0) # Down on screen
+
+	if pan_factor_x != 0.0 or pan_factor_y != 0.0:
+		var move_vector = (cam_screen_right * pan_factor_x) + (cam_screen_fwd * pan_factor_y)
+		var speed_mult = move_vector.length()
+		global_position += move_vector.normalized() * (pan_speed * speed_mult) * delta
 		_clamp_pivot_position()
 
 func _clamp_pivot_position() -> void:
