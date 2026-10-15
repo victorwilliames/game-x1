@@ -44,6 +44,11 @@ const puppeteer = require(puppeteerPath);
       '--ignore-gpu-blocklist',
       '--enable-gpu-rasterization',
       '--autoplay-policy=no-user-gesture-required',
+      '--disable-frame-rate-limit',
+      '--disable-gpu-vsync',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
     ],
   });
   const page = await browser.newPage();
@@ -73,13 +78,32 @@ const puppeteer = require(puppeteerPath);
   await page.mouse.move(width / 2, height / 2);
   await new Promise((r) => setTimeout(r, settleMs));
 
-  const info = await page.evaluate(() => ({
-    innerWidth: window.innerWidth,
-    innerHeight: window.innerHeight,
-    dpr: window.devicePixelRatio,
-    raf: window._gamex1_raf ? window._gamex1_raf.fps : null,
-  }));
-  console.log(`[capture:${kind}] viewport=${info.innerWidth}x${info.innerHeight} dpr=${info.dpr} raf=${info.raf}`);
+  const info = await page.evaluate(async () => {
+    // Sample 6 animation frames for frame timing
+    const deltas = [];
+    let lastT = performance.now();
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => requestAnimationFrame((t) => {
+        deltas.push(t - lastT);
+        lastT = t;
+        r();
+      }));
+    }
+    const avgDelta = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+    const measuredFps = Math.round(1000 / avgDelta);
+
+    return {
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      dpr: window.devicePixelRatio,
+      raf: window._gamex1_raf ? window._gamex1_raf.fps : null,
+      engineFps: window._gamex1_engine_fps || null,
+      engineFrameTimeMs: window._gamex1_frame_time_ms || null,
+      measuredFps,
+      avgDeltaMs: Number(avgDelta.toFixed(2)),
+    };
+  });
+  console.log(`[capture:${kind}] viewport=${info.innerWidth}x${info.innerHeight} dpr=${info.dpr} raf=${info.raf} engineFps=${info.engineFps} avgFrameTime=${info.avgDeltaMs}ms measuredFps=${info.measuredFps}`);
 
   await page.screenshot({ path: out });
   console.log(`[capture:${kind}] saved ${out}`);

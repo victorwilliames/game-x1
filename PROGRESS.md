@@ -40,6 +40,13 @@
   - Alinhamento das barras de vida flutuantes e contornos de 1px sem borrar as fontes.
   - Telemetria de debug movida para overlay opcional acionável por `F3`.
   - Capturas e composições lado a lado geradas em `docs/migration/visual/` (`A_three_baseline.png`, `B_godot_corrected.png`, `C_comparison_side_by_side.png`, `D_hud_detail.png`, `E_grid_detail.png`).
+- [x] **Fase 7 — Pipeline Gráfico, Antialiasing e Calibragem Visual 1:1 ao Three.js:**
+  - Antialiasing MSAA 2x ativo no WebGL 2.0 (`rendering/anti_aliasing/quality/msaa_3d=1`) eliminando o serrilhamento da Caitlyn sem perda de nitidez de linhas ou texto (FXAA mantido desligado).
+  - Anisotropia 4x (`anisotropic_filtering_level=2`) proporcionando filtragem trilinear e acabamento refinado das texturas em ângulo oblíquo.
+  - Otimização do Shadow Map PCF: alcance ortogonal reduzido para 55.0m (caixa $60\times 60$ idêntica ao Three.js $d=30$), bias ajustado para 0.02 e normal_bias para 1.0 (eliminação total do peter-panning e sombras nítidas acopladas à sola dos pés).
+  - Calibragem fotométrica do piso PBR: ajuste de `albedo_color` e `metallic_specular` para contrabalancear a conversão sRGB do Godot, atingindo `[24, 26, 28]` na tela vs `[23, 25, 27]` no Three.js ($\Delta \le 1$ valor RGB).
+  - Snapping 2D de pixels inteiro: `snap_2d_transforms_to_pixel` e `pos = pos.round()` em `floating_bars.gd`, garantindo textos e contornos de 1px com legibilidade idêntica ao DOM HTML/CSS nativo.
+  - Documentação completa em `docs/migration/ART_DIRECTION.md` e composições em `docs/migration/visual/` (`C_comparison_side_by_side.png`, `caitlyn_edge_comparison.png`, `D_hud_detail.png`, `E_grid_detail.png`, `shadows_comparison.png`).
 - [x] **Validação Automatizada Quíntupla (`scripts/test.ps1`):**
   - 1/5: Import & parse do editor headless.
   - 2/5: Smoke check de 60 frames.

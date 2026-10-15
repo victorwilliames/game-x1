@@ -498,6 +498,7 @@ func _update_telemetry(delta: float) -> void:
 			var raf_val = JavaScriptBridge.eval("window._gamex1_raf ? window._gamex1_raf.fps : 0")
 			if raf_val != null:
 				cached_raf_hz = int(raf_val)
+			JavaScriptBridge.eval("window._gamex1_engine_fps = %d; window._gamex1_frame_time_ms = %.2f;" % [Engine.get_frames_per_second(), current_frame_time_ms])
 
 		_update_hud()
 

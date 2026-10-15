@@ -58,6 +58,7 @@ func _draw() -> void:
 				_draw_enemy_plate(d, screen_pt, active_font, font_size_name, font_size_hp)
 
 func _draw_player_plate(pos: Vector2, p_font: Font, sz_name: int, sz_hp: int, sz_lvl: int) -> void:
+	pos = pos.round()
 	var total_w := 105.0
 	var half_w := total_w * 0.5
 	var left := pos.x - half_w
@@ -115,6 +116,7 @@ func _draw_player_plate(pos: Vector2, p_font: Font, sz_name: int, sz_hp: int, sz
 	draw_rect(mana_fill, Color(0.0, 0.75, 1.0, 1.0)) # #00bfff
 
 func _draw_enemy_plate(dummy: Node3D, pos: Vector2, p_font: Font, sz_name: int, sz_hp: int) -> void:
+	pos = pos.round()
 	var total_w := 105.0
 	var half_w := total_w * 0.5
 	var left := pos.x - half_w

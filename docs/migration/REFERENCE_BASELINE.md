@@ -82,3 +82,14 @@ Para considerar cada sistema migrado com sucesso:
 1. Abrir `game-x0-moba` e `game-x1` lado a lado na mesma resolução ($1280 \times 720$).
 2. Executar o mesmo comando (ex: clique direito, alternar trava, ataque com X, kiting contínuo).
 3. Verificar a paridade visual (escala, ângulos, iluminação, cores) e a resposta tátil (sem atraso perceptível de clique).
+
+---
+
+## 4. Paridade Visual e Pipeline Gráfico Verificado (2026-10-15)
+
+- **Antialiasing:** MSAA 2x ativo no WebGL 2.0 (`rendering/anti_aliasing/quality/msaa_3d = 1`), eliminando o aliasing de borda da Caitlyn sem o borrado do FXAA.
+- **Anisotropia:** Nível 4x (`anisotropic_filtering_level = 2`) para nitidez em ângulos rasos da câmera isométrica.
+- **Calibragem do Piso PBR:** Albedo calibrado para `[24, 26, 28]` no Godot vs `[23, 25, 27]` no Three.js ($\Delta \le 1$ valor RGB).
+- **Sombras PCF:** Alcance ortogonal ajustado para 55.0m com viés de 0.02, garantindo sombras nítidas acopladas aos pés.
+- **Tipografia:** Fonte `Outfit` com pesos 0.15/0.45 e snapping de pixel inteiro nas placas flutuantes.
+- **Evidências:** Composições salvas em `docs/migration/visual/C_comparison_side_by_side.png` e detalhes em `ART_DIRECTION.md`.
