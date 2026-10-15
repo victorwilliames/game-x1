@@ -4,6 +4,10 @@ This repository is the source of truth for a small, original, playable Godot 3D 
 
 ## Principles
 - Optimize for **a playable vertical slice**, not a generic MOBA framework.
+- **Mandatory dev-only visual policy:** do NOT prioritize production graphics, realistic character models, professional art, decorated environments, texture work, complex shaders, polished particles, cosmetic animation, asset packs or Blender. Prioritize mechanics and tests.
+- Use **debug/prototype visuals on purpose**: 3D stick figures or articulated skeletons (lines/bones + visible joint dots), simple primitive towers/minions, flat surfaces or grid flooring, debug collision shapes/range circles, and minimal developer HUD. This is not a pixel-art or 2D requirement: gameplay and movement remain fully 3D.
+- Visual feedback must exist to verify functionality (attacks, projectiles, cooldowns, death, animation states), but a clear diagnostic shape/colour/label is sufficient. Do not spend time making it beautiful.
+- Do not introduce an art-production phase until the project owner explicitly requests it. Keep game logic independent from the debug renderers.
 - **No overengineering:** avoid speculative abstractions, unused services, premature ECS frameworks, generic plugin layers, and needless dependencies.
 - Implement **one focused increment** at a time; keep changes reviewable and the project runnable.
 - When a request is ambiguous, preserve the intended **player experience**, not just a literal checklist. Research close gameplay precedents when necessary.

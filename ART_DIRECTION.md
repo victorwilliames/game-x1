@@ -1,40 +1,33 @@
-# Direção de arte — protótipo game-x1
+# Visualização de desenvolvimento — game-x1
 
-**Status:** direção inicial, a ser validada visualmente no próprio jogo.
+**Regra vigente:** NÃO focar em gráficos finais. Este arquivo documenta somente a representação visual mínima que permite **desenvolver, observar, depurar e testar o jogo**.
 
-## Intenção visual
+## Referência visual aprovada para prototipagem
 
-Fantasia estilizada, 3D verdadeiro, legível de uma câmera MOBA elevada e inclinada. **Originalidade e consistência acima de realismo.** Proibido copiar modelos, personagens, ícones, mapas ou efeitos de jogos comerciais.
+A imagem enviada pelo usuário em 15/10/2026 mostra um **boneco de linhas com articulações pontuadas**, desenhado sobre **piso escuro quadriculado em perspectiva**. É uma referência de **nível de simplicidade e linguagem de debug**, não uma exigência de reprodução artística exata.
 
-## Protótipo: arte por código
+- **Herói:** boneco-palito / esqueleto articulado no mundo 3D; braços e pernas como linhas ou cilindros finos, juntas como pontos/esferas pequenas. Cabeça e torso podem ser apenas marcadores simples.
+- **Movimento:** visualizar claramente pivôs, rotação, direção, Idle, Run, Attack, Cast, Dodge, Hit e Death. Pode usar movimentação procedural ou AnimationPlayer simples.
+- **Cenário:** plano 3D, grade de referência e limites da arena visíveis. Sem árvores, montanhas, props decorativos ou texturas complexas.
+- **Minions e torres:** marcadores, cápsulas, cubos ou silhuetas geométricas simplificadas, distinguíveis por forma/equipe.
+- **Poderes Q/W/E/R:** geometria básica, trajetórias, círculos de alcance, sinais de área, cor e duração suficientes para verificar timing/colisão/dano; nenhum VFX polido obrigatório.
+- **HUD:** HP, cooldowns, alvo, status e informações de teste com texto/retângulos simples. Clareza funcional acima da aparência.
+- **Depuração opcional:** hitboxes, raios de ataque, waypoints, navegação, velocidade, FPS e estados de IA, com exibição configurável.
 
-- Usar formas geométricas Godot (malhas, materiais, luz, partículas, shaders simples) para construir herói, minions, torre, base, terreno e vegetação.
-- O herói deve ter cabeça, tronco, braços, pernas e acessório visual com pivôs manipuláveis para animação básica.
-- Formas e cores devem distinguir rapidamente equipes, inimigos, unidades e estruturas; nunca depender **somente** da cor para informação importante.
-- Silhuetas claras, pouca textura, materiais simples, VFX com contraste mas sem cobrir áreas relevantes de combate.
-- Não gastar tempo produzindo rigs detalhados ou texturas avançadas antes do primeiro playtest.
+## Como implementar
 
-## Movimento e animação
+- Tudo permanece em **Godot 3D com câmera elevada e inclinada**, apesar do aspecto de boneco-palito. Não transformar o projeto em plataforma 2D.
+- Preferir recursos nativos: MeshInstance3D, SphereMesh/CylinderMesh/BoxMesh, segmentos desenhados e materiais simples; evitar addons pesados.
+- Articulações e animações devem refletir eventos reais da gameplay. Não usar animação como fonte autoritativa de dano/colisão.
+- Separar classes/estado do herói da representação de debug. O visual deve ser substituível futuramente sem refazer movimentação, hit detection ou habilidades.
+- **Não produzir** modelagem complexa, rigs de produção, texturas, cenários detalhados, shaders cinematográficos, efeitos de partículas elaborados, ícones finais ou ilustrações. Não usar Blender ou serviços pagos para cumprir estas etapas.
 
-- Idle: respiração e leve balanço.
-- Run: braços/pernas alternados, resposta imediata a mudança de direção.
-- Basic attack: preparação curta, disparo na janela correta, recuperação.
-- Cast Q/W/E/R: gesto correspondente à magia com emissão sincronizada.
-- Dodge: inclinação, aceleração/desaceleração e rastro curto.
-- Hit/death/respawn: feedback visível e cancelamento correto de ações quando necessário.
-- Animações devem responder ao estado real da simulação; não criar dano como efeito colateral da animação.
+## Critério de aceite visual nesta fase
 
-## Efeitos e HUD
+A pergunta não é 'está bonito?', mas sim: **o jogador consegue controlar e perceber o que aconteceu?** É possível observar direção, movimento, animação, esquiva, ataque, acerto, falha, colisão, vida, cooldown e objetivos na câmera real de jogo? A build Web representa corretamente estes estados?
 
-- Cada habilidade precisa ter identidade própria por silhueta, som (quando existir), movimento e contraste.
-- Telegraphs mostram área/tempo antes do impacto; partículas não substituem validação de hitboxes.
-- HUD simples e coeso, fontes sans-serif nítidas, ícones e cooldowns acessíveis; evitar interface genérica poluída.
-- Revisar efeitos na **distância normal da câmera**, não apenas em close.
+Um protótipo pode estar completo para esta fase mesmo parecendo um ambiente de testes de física/animação.
 
-## Revisão
+## Fase artística futura
 
-Critérios: leitura de alvos, clareza de equipes, orientação espacial, feedback de dano, transições, responsividade e desempenho Web. Capturas reais do jogo e testes da build têm precedência sobre mockups.
-
-## Futuro pipeline
-
-Quando aprovado o gameplay, considerar **Blender CLI + Python → glTF/.glb → Godot** para modelos e animações originais refinados. Preservar separação entre visual e lógica para troca progressiva; pacotes terceiros são opcionais, sujeitos a licença e direção artística.
+Somente após solicitação explícita da direção do produto: definir identidade visual final, modelos, materiais, cenários, animação profissional e pipeline opcional Blender CLI/glTF. Até lá, evitar tarefas de polimento visual.

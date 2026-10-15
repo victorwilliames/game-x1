@@ -8,6 +8,8 @@ Criar **um protótipo 1v1 realmente jogável e divertido**, mesmo com arte inici
 
 **Prioridade de teste:** Web. Plataformas-alvo adicionais: Windows e Android. Primeiro jogar contra bot; depois implementar 1v1 online com servidor autoritativo.
 
+**Visual de desenvolvimento:** não focar em gráficos finais. Heróis podem ser bonecos-palito 3D articulados, com chão quadriculado e elementos geométricos de debug. O objetivo é construir e testar mecânicas, animações, combate, IA e multiplayer. Consulte [ART_DIRECTION.md](ART_DIRECTION.md).
+
 ## Situação
 
 **Planejamento inicial.** Ainda não foi criado ou testado um projeto Godot neste repositório. Não confunda esta documentação com um protótipo funcional.

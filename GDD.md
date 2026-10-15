@@ -8,6 +8,8 @@ MOBA competitivo 3D visto por uma câmera elevada e inclinada, com controles cla
 
 **Objetivo imediato:** produzir uma partida completa 1v1 de uma única rota que seja agradável de jogar mesmo com arte simples.
 
+**Política visual obrigatória nesta fase:** o jogo será uma **plataforma de desenvolvimento e testes de gameplay**, com gráficos diagnósticos intencionais, não uma demonstração de arte. A referência visual é um boneco-palito/esqueleto articulado com linhas e pontos nas juntas, em um chão quadriculado escuro. Não polir personagens, cenário, HUD ou VFX enquanto não houver autorização explícita.
+
 **Plataformas:** Web para playtest, Windows e Android como alvos desde cedo. No PC, mouse/teclado; controles touch vêm em etapa específica.
 
 ## 2. Loop jogável
@@ -23,7 +25,7 @@ MOBA competitivo 3D visto por uma câmera elevada e inclinada, com controles cla
 
 ## 3. Arena
 
-- Uma lane central claramente navegável; terreno, vegetação e props laterais originais.
+- Uma lane central claramente navegável e visualizada com chão plano/grade. Sem obrigação de vegetação, rochas, ornamentos ou cenário artístico.
 - Duas bases opostas, **uma torre defensiva por lado** e um núcleo por base.
 - Minions surgem em ondas regulares e avançam em direção à estrutura inimiga.
 - Navegação/colisão impedem atravessar obstáculos; alcance e áreas de ataque devem ser visíveis.
@@ -31,9 +33,9 @@ MOBA competitivo 3D visto por uma câmera elevada e inclinada, com controles cla
 
 ## 4. Herói inicial
 
-**Arquétipo provisório:** mago 3D estilizado e geométrico, com silhueta própria e cajado.
+**Arquétipo lógico provisório:** mago com ataques e habilidades mágicas; **aparência temporária:** boneco-palito 3D articulado, formado por segmentos simples e pontos nas juntas, como a referência enviada pelo usuário. Cajado, roupa, rosto, textura, cabelo e detalhes estéticos não são necessários nesta etapa.
 
-**Movimentos/animações:** Idle, Run, Attack, Cast, Dodge, Hit, Death e respawn. Precisam ser legíveis da câmera de gameplay, ainda que simples.
+**Movimentos/animações:** Idle, Run, Attack, Cast, Dodge, Hit, Death e respawn. Nesta fase o objetivo é testar poses, articulações, transições, sincronização e responsividade, mesmo que os movimentos usem apenas linhas/segmentos. Precisam ser legíveis da câmera de gameplay.
 
 **Comandos desktop propostos:**
 - Clique direito no chão: mover.

@@ -22,7 +22,7 @@
 - [ ] Teste simples para Windows; avaliação inicial das limitações Android.
 
 **1. Herói e movimentação**
-- [ ] Mago 3D geométrico original com Idle e Run.
+- [ ] Boneco-palito 3D articulado com segmentos/juntas visíveis, Idle e Run (visual de desenvolvimento, sem arte final).
 - [ ] Clique para mover, rotação coerente, câmera acompanhando.
 - [ ] Esquiva (Shift) com animação, cooldown e colisão.
 
@@ -48,4 +48,4 @@
 
 Registrar por incremento: commit, funcionalidade jogável, comando/teste executado, resultado, captura real (quando visual) e limitações. Não reportar aprovação estética sem playtest humano.
 
-**Próxima tarefa para o Antigravity:** etapa 0, em incrementos pequenos. Ainda não começar arte detalhada ou multiplayer online.
+**Próxima tarefa para o Antigravity:** etapa 0, em incrementos pequenos. Usar somente visual de debug (grade 3D, primitivas, boneco de juntas/linhas); não iniciar polimento gráfico, Blender ou multiplayer online.
