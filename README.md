@@ -20,6 +20,7 @@ Criar **um protótipo 1v1 realmente jogável e divertido**, mesmo com arte inici
 - [GDD.md](GDD.md): escopo, mecânicas e condições de aceite do protótipo.
 - [ART_DIRECTION.md](ART_DIRECTION.md): regras de aparência, animação e efeitos iniciais.
 - [PROGRESS.md](PROGRESS.md): estado verificável e próximo incremento.
+- [HANDOFF.md](HANDOFF.md): memória de execução compartilhada, pendências, testes e ponto exato de retomada.
 
 ## Como vamos trabalhar
 

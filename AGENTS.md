@@ -31,5 +31,13 @@ This repository is the source of truth for a small, original, playable Godot 3D 
 - Never report a build/test as passed unless it actually ran; record limitations and evidence.
 - Avoid force-push, destructive rewrites, secrets in Git and overwriting concurrent work. Inspect current state and sync before edits.
 
+## Session continuity / project memory
+- **Always read `HANDOFF.md` before resuming a session**. It is the current work handoff and the first place to look for blockers, last checks and next steps. `PROGRESS.md` tracks longer-term milestones; commits hold implementation history. Avoid duplicating full histories in multiple files.
+- **Update `HANDOFF.md` at each meaningful milestone and before stopping, pausing, switching agent or ending a task**. It must state: branch/last commit, local uncommitted changes, exact files changed, implemented versus verified, tests and commands with outcome, pending issues, next command/action.
+- Label states explicitly **verified**, **reported but unverified**, **pending**, or **blocked**. Never call a Web export visually tested merely because files were generated, and never call local-only code shared until it is pushed.
+- Keep the handoff concise (ideally under ~100 lines); replace stale status rather than appending a never-ending transcript. No tokens, credentials, raw private logs or machine-specific secrets.
+- Before pushing, fetch/sync remote changes without overwriting local edits. The GitHub `main` may receive documentation updates from the tech lead during local development.
+- Do not let memory writing replace development: update concisely and continue the assigned task.
+
 ## Delivery format
 Report: (1) what the player can do now, (2) files changed, (3) commands/tests actually run and results, (4) how to launch/play, (5) known bugs/next increment. Update `PROGRESS.md` only with verified facts.
