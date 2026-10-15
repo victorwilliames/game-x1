@@ -1,7 +1,7 @@
 # Progresso — game-x1
 
 **Atualizado:** 2026-10-15  
-**Fase:** Etapa 0 concluída tecnicamente (exportação Web e pipeline CLI validados; validação visual no navegador aberta para o usuário)  
+**Fase:** Etapa 0 com renderização Web confirmada por captura do usuário; próximo incremento Etapa 1A. Animação do cubo/console e execução nativa seguem sem confirmação independente.  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
 ## Situação verificada
@@ -19,7 +19,7 @@
 - [x] Projeto Godot 4.x com cena 3D, chão, luz e câmera inclinada.
 - [x] Comando/script para importar e executar pelo terminal (`scripts/test.ps1`, `scripts/run.ps1`).
 - [x] Exportação Web funcional gerando HTML/WASM/PCK (`scripts/export_web.ps1`) e servida com headers COOP/COEP (`scripts/serve_web.ps1`).
-- [ ] Validação visual humana da cena no navegador (via `powershell -ExecutionPolicy Bypass -File .\scripts\serve_web.ps1 -OpenBrowser`).
+- [x] Captura real da cena Web no Chrome (chão, cubo/sombra, câmera, HUD, ~60 FPS). A captura não comprova rotação do cubo nem console sem erros.
 - [ ] Teste simples para Windows; avaliação inicial das limitações Android.
 
 **1. Herói e movimentação**
@@ -49,4 +49,4 @@
 
 Registrar por incremento: commit, funcionalidade jogável, comando/teste executado, resultado, captura real (quando visual) e limitações. Não reportar aprovação estética sem playtest humano.
 
-**Próxima tarefa para o Antigravity:** Aguardar confirmação visual humana da versão Web e iniciar a Etapa 1 (boneco-palito 3D articulado, Idle/Run e movimentação) em incrementos pequenos.
+**Próxima tarefa para o Antigravity:** Etapa 1A: boneco-palito 3D articulado, Idle/Run, movimento por clique direito e câmera acompanhando; não iniciar ainda esquiva ou combate. Validar Web, atualizar HANDOFF e publicar.
