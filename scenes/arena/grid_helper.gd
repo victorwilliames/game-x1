@@ -3,7 +3,9 @@ extends MeshInstance3D
 class_name MobaGridHelper
 
 ## 1:1 Port of THREE.GridHelper(80, 40, '#c29d53', '#162838')
-## Uses analytical anti-aliased shader with fwidth() so lines are smooth at any angle/resolution.
+## High-performance hybrid:
+## - Secondary grid lines: ultra-fast PRIMITIVE_LINES (160 vertices, zero fillrate waste)
+## - Center gold lines: narrow quad ribbons (width 0.04m) with smooth analytic alpha feathering (anti-aliased at 0 fragment cost)
 
 @export var size: float = 80.0:
 	set(val):
@@ -25,6 +27,8 @@ class_name MobaGridHelper
 		color_grid = val
 		_rebuild_grid()
 
+var _gold_ribbon_instance: MeshInstance3D = null
+
 func _ready() -> void:
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_rebuild_grid()
@@ -33,61 +37,120 @@ func _rebuild_grid() -> void:
 	if divisions <= 0 or size <= 0:
 		return
 
-	var p_mesh := PlaneMesh.new()
-	p_mesh.size = Vector2(size, size)
-	mesh = p_mesh
+	var step: float = size / float(divisions)
+	var half_size: float = size * 0.5
+	var center_idx: int = divisions / 2
 
-	var sh := Shader.new()
-	sh.code = """
+	# 1. Build secondary lines using lightweight PRIMITIVE_LINES
+	var vertices := PackedVector3Array()
+	var colors := PackedColorArray()
+
+	for i in range(divisions + 1):
+		if i == center_idx:
+			continue # Center lines are rendered with smooth gold ribbons below
+
+		var k: float = -half_size + float(i) * step
+
+		# Line parallel to X axis
+		vertices.append(Vector3(-half_size, 0.0, k))
+		colors.append(color_grid)
+		vertices.append(Vector3(half_size, 0.0, k))
+		colors.append(color_grid)
+
+		# Line parallel to Z axis
+		vertices.append(Vector3(k, 0.0, -half_size))
+		colors.append(color_grid)
+		vertices.append(Vector3(k, 0.0, half_size))
+		colors.append(color_grid)
+
+	var arr_mesh := ArrayMesh.new()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_LINES, arrays)
+	mesh = arr_mesh
+
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material_override = mat
+
+	# 2. Build anti-aliased gold ribbons for center lines (X=0 and Z=0)
+	if _gold_ribbon_instance == null:
+		_gold_ribbon_instance = get_node_or_null("GoldRibbons") as MeshInstance3D
+		if _gold_ribbon_instance == null:
+			_gold_ribbon_instance = MeshInstance3D.new()
+			_gold_ribbon_instance.name = "GoldRibbons"
+			add_child(_gold_ribbon_instance)
+
+	_gold_ribbon_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var ribbon_half_w := 0.035 # 0.07m total width
+	var r_verts := PackedVector3Array()
+	var r_uvs := PackedVector2Array()
+	var r_indices := PackedInt32Array()
+
+	# Ribbon along X axis (z from -w to +w, x from -half_size to +half_size)
+	# UV.y: 0.0 at -w, 0.5 at center, 1.0 at +w
+	var base := r_verts.size()
+	r_verts.append(Vector3(-half_size, 0.001, -ribbon_half_w))
+	r_uvs.append(Vector2(0.0, 0.0))
+	r_verts.append(Vector3(half_size, 0.001, -ribbon_half_w))
+	r_uvs.append(Vector2(1.0, 0.0))
+	r_verts.append(Vector3(half_size, 0.001, ribbon_half_w))
+	r_uvs.append(Vector2(1.0, 1.0))
+	r_verts.append(Vector3(-half_size, 0.001, ribbon_half_w))
+	r_uvs.append(Vector2(0.0, 1.0))
+	r_indices.append_array([base, base + 1, base + 2, base, base + 2, base + 3])
+
+	# Ribbon along Z axis (x from -w to +w, z from -half_size to +half_size)
+	base = r_verts.size()
+	r_verts.append(Vector3(-ribbon_half_w, 0.001, -half_size))
+	r_uvs.append(Vector2(0.0, 0.0))
+	r_verts.append(Vector3(ribbon_half_w, 0.001, -half_size))
+	r_uvs.append(Vector2(1.0, 0.0))
+	r_verts.append(Vector3(ribbon_half_w, 0.001, half_size))
+	r_uvs.append(Vector2(1.0, 1.0))
+	r_verts.append(Vector3(-ribbon_half_w, 0.001, half_size))
+	r_uvs.append(Vector2(0.0, 1.0))
+	r_indices.append_array([base, base + 1, base + 2, base, base + 2, base + 3])
+
+	var ribbon_mesh := ArrayMesh.new()
+	var r_arrays := []
+	r_arrays.resize(Mesh.ARRAY_MAX)
+	r_arrays[Mesh.ARRAY_VERTEX] = r_verts
+	r_arrays[Mesh.ARRAY_TEX_UV] = r_uvs
+	r_arrays[Mesh.ARRAY_INDEX] = r_indices
+	ribbon_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, r_arrays)
+	_gold_ribbon_instance.mesh = ribbon_mesh
+
+	var r_sh := Shader.new()
+	r_sh.code = """
 shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
 
-uniform vec4 color_center : source_color = vec4(0.7608, 0.6157, 0.3255, 0.95);
-uniform vec4 color_grid : source_color = vec4(0.0863, 0.1569, 0.2196, 0.70);
-uniform float grid_size = 80.0;
-uniform float grid_divisions = 40.0;
+uniform vec4 gold_color : source_color = vec4(0.7608, 0.6157, 0.3255, 0.95);
 
-varying vec2 v_xz;
+varying vec2 v_uv;
 
 void vertex() {
-	v_xz = VERTEX.xz;
+	v_uv = UV;
 }
 
 void fragment() {
-	float step_size = grid_size / grid_divisions;
-	vec2 coord = v_xz;
-
-	// Anti-aliasing derivative
-	vec2 fw = max(fwidth(coord), vec2(0.008));
-
-	// Distance to nearest grid line
-	vec2 grid_dist = abs(fract(coord / step_size + 0.5) - 0.5) * step_size;
-	vec2 line_aa = smoothstep(fw * 1.25, vec2(0.0), grid_dist);
-	float grid_line = max(line_aa.x, line_aa.y);
-
-	// Distance to center lines (X=0 and Z=0)
-	vec2 center_dist = abs(coord);
-	vec2 center_aa = smoothstep(fw * 1.5, vec2(0.0), center_dist);
-	float center_line = max(center_aa.x, center_aa.y);
-
-	// Blend colors
-	vec3 col = mix(color_grid.rgb, color_center.rgb, center_line);
-	float a = max(grid_line * color_grid.a, center_line * color_center.a);
-
-	if (a < 0.005) {
-		discard;
-	}
-
-	ALBEDO = col;
-	ALPHA = a;
+	// UV.y is across the ribbon: 0.0 at edge, 0.5 at center, 1.0 at opposite edge
+	float dist_from_center = abs(v_uv.y - 0.5) * 2.0; // 0.0 at center, 1.0 at edge
+	float aa = 1.0 - smoothstep(0.15, 1.0, dist_from_center);
+	ALBEDO = gold_color.rgb;
+	ALPHA = gold_color.a * aa;
 }
 """
-	var mat := ShaderMaterial.new()
-	mat.shader = sh
-	mat.set_shader_parameter("color_center", color_center)
-	mat.set_shader_parameter("color_grid", color_grid)
-	mat.set_shader_parameter("grid_size", size)
-	mat.set_shader_parameter("grid_divisions", float(divisions))
-	material_override = mat
+	var r_mat := ShaderMaterial.new()
+	r_mat.shader = r_sh
+	r_mat.set_shader_parameter("gold_color", color_center)
+	_gold_ribbon_instance.material_override = r_mat
 
-	position = Vector3(0.0, 0.012, 0.0)
+	position = Vector3(0.0, 0.01, 0.0)

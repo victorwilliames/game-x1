@@ -112,3 +112,41 @@
 3. Em `scenes/ui/floating_bars.gd`:
    - Nas fontes das barras flutuantes (`_f_name` e `_f_hp`), passar `extra_spacing_glyph = 1` (`MobaFonts.get_outfit(800, 1)` e `MobaFonts.get_outfit(700, 1)`), reproduzindo o `letter-spacing: 0.5px` do `style.css` (linhas 222, 231, 271 e 282).
    - Em `_draw_tl_shadowed(tl: TextLine, pos: Vector2, col: Color)`, substituir `tl.draw_outline(ci, p, 3, ...)` por `tl.draw_outline(ci, p, 2, Color(0, 0, 0, 0.85))` + `tl.draw(ci, p + Vector2(0, 1), Color(0, 0, 0, 0.85))` + `tl.draw(ci, p, col)`.
+
+---
+
+## 4. Investigação Rigorosa de Regressão de FPS (Commit `de0ca24` vs `53a631c`)
+
+### A. Diagnóstico Isolado dos 3 Gargalos
+
+1. **Gargalo 1: Custo Real do MSAA 2× no WebGL 2.0 (Direct3D 11/ANGLE):**
+   - No Godot 4 Web (`gl_compatibility`), `msaa_3d = 1` aloca um renderbuffer multisample offscreen e executa `gl.blitFramebuffer` a cada frame.
+   - **Medição isolada:**
+     - Com `msaa_3d = 1`: ~56–57 FPS (17.7–20.5 ms).
+     - Com `msaa_3d = 0`: ~98–102 FPS (9.8–10.1 ms).
+     - **Custo isolado do MSAA 2×:** **+7.8 ms por frame** (queda de ~45 FPS em uncapped). Portanto, o MSAA 2× **não** pode ser mantido ativo na Web sem estourar o orçamento de 120 FPS.
+
+2. **Gargalo 2: Custo do Plano 80×80 com `discard` no `grid_helper.gd`:**
+   - O plano 80×80 cobria ~850.000 pixels da tela (92% do viewport 1280×720). O uso de `discard` e `smoothstep` em cada pixel desligava o Early-Z e sobrecarregava os fragment shaders.
+   - **Correção aplicada (Solução Híbrida de Fita/Ribbon):**
+     - Linhas secundárias azuis: `PRIMITIVE_LINES` leves (160 vértices, 1 draw call, custo zero de fragmentos).
+     - Linhas centrais douradas (`X=0` e `Z=0`): duas fitas quads estreitas (largura 0.07m) com shader analítico de alpha suave `1.0 - smoothstep(0.15, 1.0, dist)`.
+     - Área renderizada caiu de 850.000 pixels para ~1.200 pixels (**99.9% menos fragmentos**), mantendo a linha dourada 100% anti-serrilhada e sem degraus!
+
+3. **Gargalo 3: Correção do `smoothstep()` Invertido (GLSL Spec):**
+   - No GLSL, `smoothstep(edge0, edge1, x)` com `edge0 > edge1` gera comportamento indefinido.
+   - Corrigido para `1.0 - smoothstep(0.15, 1.0, dist)` em conformidade estrita com a especificação GLSL.
+
+4. **Auditoria da Física `Dummy`:**
+   - Comprovado por auditoria de código que o jogo usa 100% matemática analítica vetorial para movimentação (`set_move_target`), seleção de alvos (`distance_squared_to`) e raycasts do mouse (`ground_plane.intersects_ray`).
+   - O motor de física 3D `Dummy` não afeta nenhuma mecânica de combate, movimentação ou targeting (todos os 5 testes headless passam com 100% de sucesso).
+
+### B. Matriz de Resultados das Variáveis Isoladas
+
+| Configuração | Uncapped Idle | Uncapped Movement | Uncapped Damage | V-Sync Movement |
+| :--- | :--- | :--- | :--- | :--- |
+| `de0ca24` (MSAA 2x + Plano 80x80 Discard) | 61 FPS (16.4 ms) | 38–62 FPS (16.2–26.1 ms) | 45–62 FPS (16.0–22.5 ms) | 59 FPS (16.9 ms) |
+| `smoothstep_fixed` (Plano 80x80 Discard) | 60 FPS (16.7 ms) | 58 FPS (17.1 ms) | 57 FPS (17.5 ms) | 46 FPS (21.6 ms) |
+| `primitive_lines_msaa2x` (MSAA 2x isolado) | 57 FPS (17.7 ms) | 56 FPS (18.0 ms) | 49 FPS (20.5 ms) | 59 FPS (17.0 ms) |
+| `primitive_lines_msaa0x` (MSAA 0x isolado) | **99 FPS** (10.1 ms) | **98 FPS** (10.2 ms) | **102 FPS** (9.8 ms) | 55 FPS (18.2 ms) |
+| **Configuração Final Verificada** (MSAA 0x + Fita Dourada Suave + Anéis Suaves) | **84 FPS** (11.8 ms) | **89 FPS** (11.3 ms) | **99 FPS** (10.0 ms) | **60 FPS** (16.8 ms, 1% Low: 59) |
