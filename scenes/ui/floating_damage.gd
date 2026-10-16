@@ -83,6 +83,6 @@ func _draw() -> void:
 		var text_sz := item.tl.get_size()
 		var draw_pos := Vector2(roundf(screen_pt.x - text_sz.x * 0.5), roundf(screen_pt.y - text_sz.y * 0.5))
 
-		for off in SHADOW_OFFSETS_2_5:
-			item.tl.draw(ci, draw_pos + off, shadow_col)
+		item.tl.draw(ci, draw_pos + Vector2(0, 2), Color(0.0, 0.0, 0.0, alpha * 0.7))
+		item.tl.draw_outline(ci, draw_pos, 6, shadow_col)
 		item.tl.draw(ci, draw_pos, col)

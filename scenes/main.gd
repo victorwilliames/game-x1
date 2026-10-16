@@ -136,17 +136,6 @@ func _install_web_scroll_preventer() -> void:
 	(function() {
 		if (window._godot_web_scroll_guard) return;
 		window._godot_web_scroll_guard = true;
-		window._gamex1_raf = { count: 0, fps: 0, last: performance.now() };
-		function tickRAF(now) {
-			window._gamex1_raf.count++;
-			if (now - window._gamex1_raf.last >= 1000) {
-				window._gamex1_raf.fps = Math.round((window._gamex1_raf.count * 1000) / (now - window._gamex1_raf.last));
-				window._gamex1_raf.count = 0;
-				window._gamex1_raf.last = now;
-			}
-			requestAnimationFrame(tickRAF);
-		}
-		requestAnimationFrame(tickRAF);
 		function isCanvasTarget(e) {
 			var canvas = document.getElementById('canvas');
 			return canvas && (e.target === canvas || canvas.contains(e.target));
@@ -172,10 +161,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_headless or not hero:
 		return
 
-	# F1 toggles real-time shadows, F3 toggles telemetry debug panel
+	# F1 toggles real-time shadows, F2 toggles MSAA, F3 toggles telemetry debug panel
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F1:
 			_toggle_shadows()
+			return
+		elif event.keycode == KEY_F2:
+			var vp := get_viewport()
+			vp.msaa_3d = Viewport.MSAA_DISABLED if vp.msaa_3d != Viewport.MSAA_DISABLED else Viewport.MSAA_2X
 			return
 		elif event.keycode == KEY_F3:
 			if debug_panel:

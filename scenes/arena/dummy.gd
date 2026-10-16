@@ -48,7 +48,7 @@ func _ready() -> void:
 		var border_node := tolerance_ring.get_node_or_null("Border") as MeshInstance3D
 		if border_node:
 			var border_mat := border_node.get_active_material(0)
-			border_node.mesh = RingMeshBuilder.create_ring_mesh(2.92, 3.0, 64)
+			border_node.mesh = RingMeshBuilder.create_ring_mesh(2.95, 3.0, 64)
 			if border_mat:
 				border_node.material_override = border_mat
 

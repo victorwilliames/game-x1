@@ -3,10 +3,10 @@
 [ext_resource type="Script" path="res://scenes/arena/dummy.gd" id="1_dummy_script"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
-albedo_color = Color(0.50, 0.11, 0.12, 1)
+albedo_color = Color(0.42, 0.09, 0.10, 1)
 metallic = 0.15
-metallic_specular = 0.25
-roughness = 0.65
+metallic_specular = 0.22
+roughness = 0.68
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
 material = SubResource("StandardMaterial3D_body")
@@ -39,7 +39,7 @@ size = Vector3(0.15, 0.15, 0.25)
 transparency = 1
 cull_mode = 2
 shading_mode = 0
-albedo_color = Color(0.666667, 0, 1, 0.04)
+albedo_color = Color(0.666667, 0, 1, 0.03)
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_fill"]
 material = SubResource("StandardMaterial3D_fill")
@@ -52,7 +52,7 @@ radial_segments = 32
 transparency = 1
 cull_mode = 2
 shading_mode = 0
-albedo_color = Color(0.666667, 0, 1, 0.35)
+albedo_color = Color(0.666667, 0, 1, 0.28)
 
 [sub_resource type="TorusMesh" id="TorusMesh_border"]
 material = SubResource("StandardMaterial3D_border")

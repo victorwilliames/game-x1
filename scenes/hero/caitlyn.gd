@@ -41,10 +41,59 @@ signal move_target_reached
 var anim_player: AnimationPlayer = null
 var current_anim_name: String = ""
 
+var _is_headless: bool = false
+
 func _ready() -> void:
+	_is_headless = DisplayServer.get_name() == "headless"
 	hp = max_hp
 	_setup_animations()
+	_setup_shadow_proxy()
 	_play_idle_anim()
+
+func _setup_shadow_proxy() -> void:
+	# Disable 18,549-triangle 4-surface skeletal shadow pass on skinned_mesh and replace with a fast static silhouette shadow proxy
+	for child in model_group.find_children("*", "MeshInstance3D", true, false):
+		if child is MeshInstance3D:
+			child.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var proxy_root := Node3D.new()
+	proxy_root.name = "ShadowProxy"
+	add_child(proxy_root)
+
+	# 1. Body/skirt silhouette
+	var body_mi := MeshInstance3D.new()
+	var body_cap := CapsuleMesh.new()
+	body_cap.radius = 0.44
+	body_cap.height = 2.65
+	body_cap.radial_segments = 8
+	body_cap.rings = 2
+	body_mi.mesh = body_cap
+	body_mi.position = Vector3(0.0, 1.35, 0.0)
+	body_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+	proxy_root.add_child(body_mi)
+
+	# 2. Top hat silhouette
+	var hat_mi := MeshInstance3D.new()
+	var hat_cyl := CylinderMesh.new()
+	hat_cyl.top_radius = 0.48
+	hat_cyl.bottom_radius = 0.56
+	hat_cyl.height = 0.55
+	hat_cyl.radial_segments = 8
+	hat_cyl.rings = 1
+	hat_mi.mesh = hat_cyl
+	hat_mi.position = Vector3(0.0, 2.85, 0.0)
+	hat_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+	proxy_root.add_child(hat_mi)
+
+	# 3. Hextech rifle silhouette (diagonal across body matching idle/attack pose)
+	var rifle_mi := MeshInstance3D.new()
+	var rifle_box := BoxMesh.new()
+	rifle_box.size = Vector3(2.35, 0.16, 0.16)
+	rifle_mi.mesh = rifle_box
+	rifle_mi.position = Vector3(-0.48, 1.88, 0.25)
+	rifle_mi.rotation_degrees = Vector3(0.0, 12.0, -21.0)
+	rifle_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+	proxy_root.add_child(rifle_mi)
 
 func _setup_animations() -> void:
 	anim_player = _find_anim_player(model_group)
@@ -143,7 +192,15 @@ func cancel_attack() -> void:
 func take_damage(amount: float) -> void:
 	hp = max(0.0, hp - amount)
 
+func _process(delta: float) -> void:
+	if not _is_headless:
+		_step_hero(delta)
+
 func _physics_process(delta: float) -> void:
+	if _is_headless:
+		_step_hero(delta)
+
+func _step_hero(delta: float) -> void:
 	if attack_cooldown > 0.0:
 		attack_cooldown -= delta
 

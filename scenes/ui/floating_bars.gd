@@ -36,7 +36,13 @@ class DummyBarCache:
 
 var _dummy_caches: Array[DummyBarCache] = []
 
-const SHADOW_OFFSETS: Array[Vector2] = [
+const CARDINAL_OFFSETS: Array[Vector2] = [
+	Vector2(-1, 0),
+	Vector2(1, 0),
+	Vector2(0, -1),
+	Vector2(0, 1),
+]
+const DIAG_OFFSETS: Array[Vector2] = [
 	Vector2(-1, -1),
 	Vector2(1, -1),
 	Vector2(-1, 1),
@@ -140,10 +146,9 @@ func _process(_delta: float) -> void:
 func _draw_tl_shadowed(tl: TextLine, pos: Vector2, col: Color) -> void:
 	var ci := get_canvas_item()
 	var p := pos.round()
-	# CSS drop-shadow(0 2px 4px rgba(0,0,0,0.8)) + 4-corner text-shadow
-	tl.draw(ci, p + Vector2(0, 2), Color(0, 0, 0, 0.55))
-	for off in SHADOW_OFFSETS:
-		tl.draw(ci, p + off, Color(0, 0, 0, 0.92))
+	# Drop shadow + cached outline drawn behind foreground glyph (3 calls instead of 10)
+	tl.draw(ci, p + Vector2(0, 2), Color(0, 0, 0, 0.65))
+	tl.draw_outline(ci, p, 3, Color(0, 0, 0, 0.96))
 	tl.draw(ci, p, col)
 
 func _draw() -> void:

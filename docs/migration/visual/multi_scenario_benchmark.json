@@ -1,89 +1,89 @@
 {
-  "timestamp": "2026-10-16T12:25:11.230Z",
+  "timestamp": "2026-10-16T13:55:49.386Z",
   "viewport": "1280x720 (deviceScaleFactor=1)",
   "uncapped": {
     "threejs": {
       "idle": {
-        "samples": 215,
-        "avgMs": 10.29,
-        "p95Ms": 18.5,
-        "p99Ms": 24.5,
-        "avgFps": 97,
-        "low1Fps": 41
+        "samples": 201,
+        "avgMs": 10.99,
+        "p95Ms": 21.2,
+        "p99Ms": 29.3,
+        "avgFps": 91,
+        "low1Fps": 34
       },
       "movement": {
-        "samples": 215,
-        "avgMs": 10.27,
-        "p95Ms": 18.1,
-        "p99Ms": 25.2,
-        "avgFps": 97,
-        "low1Fps": 40
+        "samples": 221,
+        "avgMs": 10.07,
+        "p95Ms": 17.7,
+        "p99Ms": 33,
+        "avgFps": 99,
+        "low1Fps": 30
       },
       "kiting": {
-        "samples": 238,
-        "avgMs": 9.27,
-        "p95Ms": 17.2,
-        "p99Ms": 21,
-        "avgFps": 108,
-        "low1Fps": 48
+        "samples": 298,
+        "avgMs": 7.41,
+        "p95Ms": 11.9,
+        "p99Ms": 15.5,
+        "avgFps": 135,
+        "low1Fps": 65
       },
       "damage": {
-        "samples": 230,
-        "avgMs": 9.62,
-        "p95Ms": 17.4,
-        "p99Ms": 26.7,
-        "avgFps": 104,
-        "low1Fps": 37
+        "samples": 308,
+        "avgMs": 7.18,
+        "p95Ms": 13.5,
+        "p99Ms": 18.5,
+        "avgFps": 139,
+        "low1Fps": 54
       },
       "camera": {
-        "samples": 276,
-        "avgMs": 8.05,
-        "p95Ms": 14.3,
-        "p99Ms": 22.8,
-        "avgFps": 124,
-        "low1Fps": 44
+        "samples": 243,
+        "avgMs": 9.12,
+        "p95Ms": 17,
+        "p99Ms": 19.6,
+        "avgFps": 110,
+        "low1Fps": 51
       }
     },
     "godot4": {
       "idle": {
-        "samples": 108,
-        "avgMs": 20.5,
-        "p95Ms": 35.63,
-        "p99Ms": 38.02,
-        "avgFps": 49,
-        "low1Fps": 26
+        "samples": 147,
+        "avgMs": 15.03,
+        "p95Ms": 33.25,
+        "p99Ms": 34.37,
+        "avgFps": 67,
+        "low1Fps": 29
       },
       "movement": {
-        "samples": 129,
-        "avgMs": 17.26,
-        "p95Ms": 34.87,
-        "p99Ms": 36.54,
-        "avgFps": 58,
-        "low1Fps": 27
+        "samples": 137,
+        "avgMs": 16.24,
+        "p95Ms": 31.94,
+        "p99Ms": 33.89,
+        "avgFps": 62,
+        "low1Fps": 30
       },
       "kiting": {
-        "samples": 125,
-        "avgMs": 17.81,
-        "p95Ms": 34.78,
-        "p99Ms": 36.9,
-        "avgFps": 56,
-        "low1Fps": 27
+        "samples": 151,
+        "avgMs": 14.69,
+        "p95Ms": 33.89,
+        "p99Ms": 35.33,
+        "avgFps": 68,
+        "low1Fps": 28
       },
       "damage": {
-        "samples": 121,
-        "avgMs": 18.3,
-        "p95Ms": 35.7,
-        "p99Ms": 36.95,
-        "avgFps": 55,
-        "low1Fps": 27
+        "samples": 190,
+        "avgMs": 11.67,
+        "p95Ms": 18.32,
+        "p99Ms": 33.39,
+        "avgFps": 86,
+        "low1Fps": 30
       },
       "camera": {
-        "samples": 123,
-        "avgMs": 18.04,
-        "p95Ms": 34.93,
-        "p99Ms": 37.65,
-        "avgFps": 55,
-        "low1Fps": 27
+        "samples": 228,
+        "avgMs": 9.71,
+        "p95Ms": 13.15,
+        "p99Ms": 17.47,
+        "avgFps": 103,
+        "low1Fps": 57
       }
     }
   },
@@ -98,78 +98,78 @@
         "low1Fps": 58
       },
       "movement": {
-        "samples": 120,
-        "avgMs": 18.33,
-        "p95Ms": 17.1,
-        "p99Ms": 67,
-        "avgFps": 55,
-        "low1Fps": 15
+        "samples": 127,
+        "avgMs": 17.32,
+        "p95Ms": 16.9,
+        "p99Ms": 17.1,
+        "avgFps": 58,
+        "low1Fps": 58
       },
       "kiting": {
-        "samples": 130,
-        "avgMs": 16.92,
-        "p95Ms": 17,
-        "p99Ms": 18.1,
-        "avgFps": 59,
-        "low1Fps": 55
+        "samples": 132,
+        "avgMs": 16.67,
+        "p95Ms": 16.9,
+        "p99Ms": 17.1,
+        "avgFps": 60,
+        "low1Fps": 58
       },
       "damage": {
         "samples": 132,
         "avgMs": 16.67,
-        "p95Ms": 17,
-        "p99Ms": 17.4,
+        "p95Ms": 16.8,
+        "p99Ms": 16.9,
         "avgFps": 60,
-        "low1Fps": 57
+        "low1Fps": 59
       },
       "camera": {
         "samples": 132,
-        "avgMs": 16.66,
-        "p95Ms": 16.9,
-        "p99Ms": 17.3,
+        "avgMs": 16.67,
+        "p95Ms": 16.8,
+        "p99Ms": 16.9,
         "avgFps": 60,
-        "low1Fps": 58
+        "low1Fps": 59
       }
     },
     "godot4": {
       "idle": {
-        "samples": 69,
-        "avgMs": 32.61,
-        "p95Ms": 50,
-        "p99Ms": 50.54,
-        "avgFps": 31,
-        "low1Fps": 20
+        "samples": 133,
+        "avgMs": 16.66,
+        "p95Ms": 16.78,
+        "p99Ms": 16.96,
+        "avgFps": 60,
+        "low1Fps": 59
       },
       "movement": {
-        "samples": 48,
-        "avgMs": 47.57,
-        "p95Ms": 67.03,
-        "p99Ms": 81.31,
-        "avgFps": 21,
-        "low1Fps": 12
+        "samples": 132,
+        "avgMs": 16.67,
+        "p95Ms": 16.81,
+        "p99Ms": 16.96,
+        "avgFps": 60,
+        "low1Fps": 59
       },
       "kiting": {
-        "samples": 95,
-        "avgMs": 23.51,
-        "p95Ms": 33.85,
-        "p99Ms": 34.54,
-        "avgFps": 43,
-        "low1Fps": 29
+        "samples": 133,
+        "avgMs": 16.67,
+        "p95Ms": 16.78,
+        "p99Ms": 16.91,
+        "avgFps": 60,
+        "low1Fps": 59
       },
       "damage": {
-        "samples": 105,
-        "avgMs": 21.11,
-        "p95Ms": 33.51,
-        "p99Ms": 33.7,
-        "avgFps": 47,
+        "samples": 130,
+        "avgMs": 16.92,
+        "p95Ms": 16.86,
+        "p99Ms": 33.36,
+        "avgFps": 59,
         "low1Fps": 30
       },
       "camera": {
-        "samples": 121,
-        "avgMs": 18.46,
-        "p95Ms": 33.49,
-        "p99Ms": 33.72,
-        "avgFps": 54,
-        "low1Fps": 30
+        "samples": 131,
+        "avgMs": 16.79,
+        "p95Ms": 16.85,
+        "p99Ms": 17.08,
+        "avgFps": 60,
+        "low1Fps": 59
       }
     }
   }
