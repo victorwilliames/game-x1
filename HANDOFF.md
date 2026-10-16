@@ -120,3 +120,15 @@ Dados reais coletados pelo harness `scripts/perf_bench.gd` via `scripts/run_perf
   - Nenhuma regressão detectada em Windows nativo ou Web.
 - **Conclusão:** Commit aprovado com sucesso. A comunicação Godot ↔ JS agora é eficiente, não-bloqueante e totalmente robusta.
 
+
+---
+
+## ChatGPT — diagnóstico diferencial do custo de FXAA (pendente validar no Godot)
+
+- **Base da implementação:** `a9427e3`, branch `main`.
+- **Adicionado:** `shaders/screen_passthrough.gdshader`, shader de diagnóstico sem filtro. Ele mantém o `ColorRect` em tela cheia, a captura de `hint_screen_texture`, e a composição do passe.
+- **Atualizado:** `scripts/perf_bench.gd`, com configuração extra `pass_only`. A materialidade do FXAA original NÃO foi alterada; o material alternativo é criado somente quando o benchmark `pass_only` o solicitar. A configuração `full` sempre restaura o material original.
+- **Rodar benchmark diferencial:** `powershell -ExecutionPolicy Bypass -File scripts/run_perf_bench.ps1 -Configs "full,pass_only,no_fxaa" -Runs 3 -Sec 12 -Warmup 6 -OutFile "docs/migration/visual/fxaa_cost_native.json"`. Para Web, use `?bench=1&runs=3&sec=12&warmup=6&configs=full,pass_only,no_fxaa` com browser real e extraia `window._gamex1_bench_result`; salve em `fxaa_cost_web.json`.
+- **Analisar por cenário e por execução (pareado):** `full - pass_only` aproxima o custo incremental do algoritmo de filtragem; `pass_only - no_fxaa` aproxima o custo do passe com cópia da tela e composição. As medidas **não são aditivas garantidas**; compare frame time e GPU viewport (quando válido), p50/p95/p99, mantendo a mesma resolução e condições. Não confundir `requestAnimationFrame` com tempo GPU.
+- **Qualidade visual:** o jogo normal segue em `full` sem alterações no shader FXAA original. `pass_only` é intencionalmente sem AA, usado exclusivamente para diagnóstico, nunca como modo de produção ou suposto ganho.
+- **Estado:** análise de código e publicação via GitHub; os testes locais de Godot/Chrome não foram executados aqui. Antigravity deve verificar parser/import, Web e Windows, confirmar troca de materiais sem regressão e medir o custo antes de propor novo FXAA.

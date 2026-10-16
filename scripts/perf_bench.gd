@@ -15,6 +15,14 @@ extends Node
 ## Web:     index.html?bench=1&runs=3&sec=12&warmup=6&configs=full&label=name
 ##          -> result JSON string is published in window._gamex1_bench_result
 ##
+## FXAA decomposition (available natively and on Web):
+##   --bench-configs=full,pass_only,no_fxaa
+##   full:       screen copy/compositing AND full FXAA filter (production)
+##   pass_only:  same full-screen screen-texture copy/compositing, no filtering
+##   no_fxaa:    postprocess layer hidden entirely
+##   Differences indicate incremental costs under matched conditions;
+##   they are not precise isolated GPU pass timings.
+##
 ## Configs are INTERLEAVED per round (A,B,C,A,B,C,...) so thermal / turbo drift on laptops
 ## affects every config equally instead of biasing whichever ran last.
 
@@ -31,6 +39,12 @@ var _main: Node = null
 var _vp_rid: RID
 var _results: Array = []
 var _info: Dictionary = {}
+
+# Benchmark-only material swap. Production FXAA shader/material remains untouched.
+# pass_only keeps the full-screen screen-texture read and blit, but skips the
+# antialiasing filter. Combined with full and no_fxaa it isolates pass overhead.
+var _baseline_fxaa_material: Material = null
+var _passthrough_material: ShaderMaterial = null
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -133,6 +147,7 @@ func _collect_info(runs: int, sec: float, warmup: float, configs: PackedStringAr
 # ---------------------------------------------------------------- configs
 func _apply_config(cfg: String) -> void:
 	var pp := _main.get_node_or_null("PostProcessLayer") as CanvasLayer
+	var fxaa_rect := _main.get_node_or_null("PostProcessLayer/FXAAEffect") as ColorRect
 	var ui := _main.get_node_or_null("UI") as CanvasLayer
 	var light := _main.get_node_or_null("DirectionalLight3D") as DirectionalLight3D
 	var fxaa := true
@@ -150,6 +165,20 @@ func _apply_config(cfg: String) -> void:
 			fxaa = false
 			shadows = false
 			ui_on = false
+	# Swap materials only during benchmark configuration transitions.
+	# "pass_only" copies the 3D screen texture but performs no FXAA filtering.
+	# For all other configurations restore the ORIGINAL shader/material exactly.
+	if fxaa_rect:
+		if _baseline_fxaa_material == null:
+			_baseline_fxaa_material = fxaa_rect.material
+		if cfg == "pass_only":
+			if _passthrough_material == null:
+				_passthrough_material = ShaderMaterial.new()
+				_passthrough_material.shader = load("res://shaders/screen_passthrough.gdshader") as Shader
+			fxaa_rect.material = _passthrough_material
+		else:
+			fxaa_rect.material = _baseline_fxaa_material
+
 	if pp:
 		pp.visible = fxaa
 	if ui:
