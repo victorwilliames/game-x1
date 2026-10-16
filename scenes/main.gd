@@ -25,6 +25,7 @@ const PLAYABLE_MAX_Z: float = 38.0
 @onready var status_hud: StatusHUD = $UI/StatusHUD
 @onready var debug_panel: PanelContainer = $UI/DebugPanel
 @onready var telemetry_label: Label = $UI/DebugPanel/TelemetryLabel
+@onready var fxaa_effect: ColorRect = get_node_or_null("PostProcessLayer/FXAAEffect")
 
 const PROJECTILE_SCENE = preload("res://scenes/combat/projectile.tscn")
 
@@ -153,7 +154,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_headless or not hero:
 		return
 
-	# F1 toggles real-time shadows, F2 toggles MSAA, F3 toggles telemetry debug panel
+	# F1 toggles real-time shadows, F2 toggles MSAA, F3 toggles telemetry debug panel, F4 toggles FXAA
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F1:
 			_toggle_shadows()
@@ -161,10 +162,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_F2:
 			var vp := get_viewport()
 			vp.msaa_3d = Viewport.MSAA_DISABLED if vp.msaa_3d != Viewport.MSAA_DISABLED else Viewport.MSAA_2X
+			_update_hud()
 			return
 		elif event.keycode == KEY_F3:
 			if debug_panel:
 				debug_panel.visible = not debug_panel.visible
+				_update_hud()
+			return
+		elif event.keycode == KEY_F4:
+			if fxaa_effect:
+				fxaa_effect.visible = not fxaa_effect.visible
 				_update_hud()
 			return
 		elif event.keycode == KEY_A:
@@ -363,6 +370,30 @@ func _process(delta: float) -> void:
 	if is_headless:
 		return
 
+	if OS.has_feature("web"):
+		var cmd_fxaa = JavaScriptBridge.eval("window._cmd_set_fxaa !== undefined ? window._cmd_set_fxaa : -1;")
+		if cmd_fxaa == 1 and fxaa_effect and not fxaa_effect.visible:
+			fxaa_effect.visible = true
+			JavaScriptBridge.eval("delete window._cmd_set_fxaa;")
+			_update_hud()
+		elif cmd_fxaa == 0 and fxaa_effect and fxaa_effect.visible:
+			fxaa_effect.visible = false
+			JavaScriptBridge.eval("delete window._cmd_set_fxaa;")
+			_update_hud()
+
+		var cmd_msaa = JavaScriptBridge.eval("window._cmd_set_msaa !== undefined ? window._cmd_set_msaa : -1;")
+		if cmd_msaa != -1:
+			var vp := get_viewport()
+			vp.msaa_3d = Viewport.MSAA_2X if cmd_msaa == 1 else Viewport.MSAA_DISABLED
+			JavaScriptBridge.eval("delete window._cmd_set_msaa;")
+			_update_hud()
+
+		var cmd_shad = JavaScriptBridge.eval("window._cmd_set_shadows !== undefined ? window._cmd_set_shadows : -1;")
+		if cmd_shad != -1 and directional_light:
+			directional_light.shadow_enabled = (cmd_shad == 1)
+			JavaScriptBridge.eval("delete window._cmd_set_shadows;")
+			_update_hud()
+
 	# 1. Update Dummies
 	for d in dummies:
 		if d and is_instance_valid(d):
@@ -466,7 +497,16 @@ func _update_telemetry(delta: float) -> void:
 		last_fps_update_time = now
 
 		if OS.has_feature("web"):
-			var raf_val = JavaScriptBridge.eval("window._gamex1_engine_fps = %d; window._gamex1_frame_time_ms = %.2f; window._gamex1_raf ? window._gamex1_raf.fps : 0;" % [Engine.get_frames_per_second(), current_frame_time_ms])
+			var shadow_flag: int = 1 if (directional_light and directional_light.shadow_enabled) else 0
+			var aa_flag := "OFF"
+			var vp := get_viewport()
+			if vp.msaa_3d != Viewport.MSAA_DISABLED:
+				aa_flag = "MSAA-2X"
+			elif fxaa_effect and fxaa_effect.visible:
+				aa_flag = "FXAA-3D"
+			var dc = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+			var prim = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+			var raf_val = JavaScriptBridge.eval("window._gamex1_engine_fps = %d; window._gamex1_frame_time_ms = %.2f; window._gamex1_aa_mode = '%s'; window._gamex1_shadows = %d; window._gamex1_draw_calls = %d; window._gamex1_prims = %d; window._gamex1_raf ? window._gamex1_raf.fps : 0;" % [Engine.get_frames_per_second(), current_frame_time_ms, aa_flag, shadow_flag, dc, prim])
 			if raf_val != null:
 				cached_raf_hz = int(raf_val)
 
@@ -483,14 +523,21 @@ func _update_hud() -> void:
 		var prims = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
 		var shadow_str = "ON" if (directional_light and directional_light.shadow_enabled) else "OFF"
 		var raf_str = " | Browser RAF: %d Hz" % cached_raf_hz if OS.has_feature("web") else ""
+		var aa_mode := "OFF"
+		var vp := get_viewport()
+		if vp.msaa_3d != Viewport.MSAA_DISABLED:
+			aa_mode = "MSAA-2X"
+		elif fxaa_effect and fxaa_effect.visible:
+			aa_mode = "FXAA-3D"
 
-		telemetry_label.text = "FPS: %d (%.1f ms)%s | DrawCalls: %d | Prims: %d | Shadows: [%s] (F1)\nCaitlyn: (%.1f, %.1f) | HP: %d/%d | AS: %.2f (+%d%%) | Speed: %.1f m/s | Cam: [%s]" % [
+		telemetry_label.text = "FPS: %d (%.1f ms)%s | DrawCalls: %d | Prims: %d | Shadows: [%s] (F1) | AA: [%s] (F2/F4)\nCaitlyn: (%.1f, %.1f) | HP: %d/%d | AS: %.2f (+%d%%) | Speed: %.1f m/s | Cam: [%s]" % [
 			Engine.get_frames_per_second(),
 			current_frame_time_ms,
 			raf_str,
 			draw_calls,
 			prims,
 			shadow_str,
+			aa_mode,
 			hero.global_position.x,
 			hero.global_position.z,
 			roundi(hero.hp),

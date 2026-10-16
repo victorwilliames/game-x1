@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scenes/ui/floating_damage.gd" id="8_floating_damage"]
 [ext_resource type="PackedScene" uid="uid://df67p8mq2k1s1" path="res://scenes/ui/status_hud.tscn" id="9_status_hud"]
 [ext_resource type="Script" path="res://scenes/ui/fullscreen_button.gd" id="10_fullscreen_button"]
+[ext_resource type="Shader" path="res://shaders/fxaa_3d.gdshader" id="11_fxaa_shader"]
 
 [sub_resource type="Environment" id="Environment_world"]
 background_mode = 1
@@ -46,6 +47,9 @@ content_margin_left = 12.0
 content_margin_top = 8.0
 content_margin_right = 12.0
 content_margin_bottom = 8.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fxaa"]
+shader = ExtResource("11_fxaa_shader")
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -124,6 +128,18 @@ cast_shadow = 0
 [node name="ClickIndicator" parent="Effects" instance=ExtResource("5_point_target")]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0.05, 0)
 visible = false
+
+[node name="PostProcessLayer" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="FXAAEffect" type="ColorRect" parent="PostProcessLayer"]
+material = SubResource("ShaderMaterial_fxaa")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="UI" type="CanvasLayer" parent="."]
 

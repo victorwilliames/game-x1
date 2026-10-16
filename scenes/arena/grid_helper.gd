@@ -46,22 +46,20 @@ func _rebuild_grid() -> void:
 	var colors := PackedColorArray()
 
 	for i in range(divisions + 1):
-		if i == center_idx:
-			continue # Center lines are rendered with smooth gold ribbons below
-
 		var k: float = -half_size + float(i) * step
+		var col: Color = color_center if i == center_idx else color_grid
 
 		# Line parallel to X axis
 		vertices.append(Vector3(-half_size, 0.0, k))
-		colors.append(color_grid)
+		colors.append(col)
 		vertices.append(Vector3(half_size, 0.0, k))
-		colors.append(color_grid)
+		colors.append(col)
 
 		# Line parallel to Z axis
 		vertices.append(Vector3(k, 0.0, -half_size))
-		colors.append(color_grid)
+		colors.append(col)
 		vertices.append(Vector3(k, 0.0, half_size))
-		colors.append(color_grid)
+		colors.append(col)
 
 	var arr_mesh := ArrayMesh.new()
 	var arrays := []
@@ -88,7 +86,7 @@ func _rebuild_grid() -> void:
 
 	_gold_ribbon_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
-	var ribbon_half_w := 0.035 # 0.07m total width
+	var ribbon_half_w := 0.07 # 0.14m width (~2.0px at camera focus)
 	var r_verts := PackedVector3Array()
 	var r_uvs := PackedVector2Array()
 	var r_indices := PackedInt32Array()
@@ -96,26 +94,27 @@ func _rebuild_grid() -> void:
 	# Ribbon along X axis (z from -w to +w, x from -half_size to +half_size)
 	# UV.y: 0.0 at -w, 0.5 at center, 1.0 at +w
 	var base := r_verts.size()
-	r_verts.append(Vector3(-half_size, 0.001, -ribbon_half_w))
+	r_verts.append(Vector3(-half_size, 0.002, -ribbon_half_w))
 	r_uvs.append(Vector2(0.0, 0.0))
-	r_verts.append(Vector3(half_size, 0.001, -ribbon_half_w))
+	r_verts.append(Vector3(half_size, 0.002, -ribbon_half_w))
 	r_uvs.append(Vector2(1.0, 0.0))
-	r_verts.append(Vector3(half_size, 0.001, ribbon_half_w))
+	r_verts.append(Vector3(half_size, 0.002, ribbon_half_w))
 	r_uvs.append(Vector2(1.0, 1.0))
-	r_verts.append(Vector3(-half_size, 0.001, ribbon_half_w))
+	r_verts.append(Vector3(-half_size, 0.002, ribbon_half_w))
 	r_uvs.append(Vector2(0.0, 1.0))
 	r_indices.append_array([base, base + 1, base + 2, base, base + 2, base + 3])
 
 	# Ribbon along Z axis (x from -w to +w, z from -half_size to +half_size)
+	# UV.y: 0.0 at -w, 0.5 at center, 1.0 at +w (transversal to line direction)
 	base = r_verts.size()
-	r_verts.append(Vector3(-ribbon_half_w, 0.001, -half_size))
+	r_verts.append(Vector3(-ribbon_half_w, 0.002, -half_size))
 	r_uvs.append(Vector2(0.0, 0.0))
-	r_verts.append(Vector3(ribbon_half_w, 0.001, -half_size))
-	r_uvs.append(Vector2(1.0, 0.0))
-	r_verts.append(Vector3(ribbon_half_w, 0.001, half_size))
-	r_uvs.append(Vector2(1.0, 1.0))
-	r_verts.append(Vector3(-ribbon_half_w, 0.001, half_size))
+	r_verts.append(Vector3(ribbon_half_w, 0.002, -half_size))
 	r_uvs.append(Vector2(0.0, 1.0))
+	r_verts.append(Vector3(ribbon_half_w, 0.002, half_size))
+	r_uvs.append(Vector2(1.0, 1.0))
+	r_verts.append(Vector3(-ribbon_half_w, 0.002, half_size))
+	r_uvs.append(Vector2(1.0, 0.0))
 	r_indices.append_array([base, base + 1, base + 2, base, base + 2, base + 3])
 
 	var ribbon_mesh := ArrayMesh.new()
@@ -130,7 +129,7 @@ func _rebuild_grid() -> void:
 	var r_sh := Shader.new()
 	r_sh.code = """
 shader_type spatial;
-render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
+render_mode unshaded, cull_disabled, blend_mix;
 
 uniform vec4 gold_color : source_color = vec4(0.7608, 0.6157, 0.3255, 0.95);
 
@@ -141,15 +140,16 @@ void vertex() {
 }
 
 void fragment() {
-	// UV.y is across the ribbon: 0.0 at edge, 0.5 at center, 1.0 at opposite edge
+	// UV.y is transversal across the ribbon: 0.0 at edge, 0.5 at center, 1.0 at opposite edge
 	float dist_from_center = abs(v_uv.y - 0.5) * 2.0; // 0.0 at center, 1.0 at edge
-	float aa = 1.0 - smoothstep(0.15, 1.0, dist_from_center);
+	float aa = 1.0 - smoothstep(0.35, 1.0, dist_from_center);
 	ALBEDO = gold_color.rgb;
 	ALPHA = gold_color.a * aa;
 }
 """
 	var r_mat := ShaderMaterial.new()
 	r_mat.shader = r_sh
+	r_mat.render_priority = 1
 	r_mat.set_shader_parameter("gold_color", color_center)
 	_gold_ribbon_instance.material_override = r_mat
 
