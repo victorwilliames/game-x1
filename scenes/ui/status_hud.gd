@@ -107,13 +107,13 @@ func _on_controls_view_draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR
 		)
 
-	# Pass 4: changing values use the original monospace bold font.
+	# Pass 4: changing values use the original monospace bold font aligned to the same text baseline.
 	if mono_bold_font and main_font:
-		var ascent_mono := mono_bold_font.get_ascent(FONT_SIZE)
+		var ascent_med := main_font.get_ascent(FONT_SIZE)
 		var status_x := main_font.get_string_size("Status: ", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 		var fps_x := main_font.get_string_size("FPS: ", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
-		controls_view.draw_string(mono_bold_font, Vector2(status_x, ascent_mono), _status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR)
-		controls_view.draw_string(mono_bold_font, Vector2(fps_x, 21.0 + ascent_mono), _fps_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR)
+		controls_view.draw_string(mono_bold_font, Vector2(status_x, ascent_med), _status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR)
+		controls_view.draw_string(mono_bold_font, Vector2(fps_x, 21.0 + ascent_med), _fps_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR)
 
 func set_status(value: String) -> void:
 	if _status_text == value:
