@@ -1,12 +1,6 @@
 [gd_scene format=3 uid="uid://df67p8mq2k1s1"]
 
 [ext_resource type="Script" path="res://scenes/ui/status_hud.gd" id="1_hud"]
-[ext_resource type="Texture2D" uid="uid://eagfd4thq6lt" path="res://assets/ui/icons/icon_mouse.png" id="2_mouse"]
-[ext_resource type="Texture2D" uid="uid://dvp4wrfkka1dp" path="res://assets/ui/icons/icon_keyboard.png" id="3_keyboard"]
-
-[sub_resource type="StyleBoxLine" id="StyleBoxLine_divider"]
-color = Color(0.760784, 0.615686, 0.32549, 0.3)
-thickness = 1
 
 [node name="StatusHUD" type="PanelContainer"]
 offset_left = 20.0
@@ -53,109 +47,8 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.847059, 0.541176, 1)
 text = "60"
 
-[node name="Divider" type="HSeparator" parent="VBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/separator = SubResource("StyleBoxLine_divider")
-
-[node name="ControlsHeader" type="Label" parent="VBoxContainer"]
+[node name="ControlsView" type="Control" parent="VBoxContainer"]
 unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.847059, 0.541176, 1)
-text = "Controles:"
-
-[node name="CtrlRow1" type="HBoxContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(264, 172)
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 7
-
-[node name="Icon" type="TextureRect" parent="VBoxContainer/CtrlRow1"]
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("2_mouse")
-stretch_mode = 3
-
-[node name="Label" type="Label" parent="VBoxContainer/CtrlRow1"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.627451, 0.666667, 0.709804, 1)
-text = "Clique Direito: Mover Caitlyn / Atacar Alvo"
-
-[node name="CtrlRow2" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 7
-
-[node name="Icon" type="TextureRect" parent="VBoxContainer/CtrlRow2"]
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("3_keyboard")
-stretch_mode = 3
-
-[node name="Label" type="Label" parent="VBoxContainer/CtrlRow2"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.627451, 0.666667, 0.709804, 1)
-text = "Tecla [X]: Ataque Direcional (Wild Rift)"
-
-[node name="CtrlRow3" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 7
-
-[node name="Icon" type="TextureRect" parent="VBoxContainer/CtrlRow3"]
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("3_keyboard")
-stretch_mode = 3
-
-[node name="Label" type="Label" parent="VBoxContainer/CtrlRow3"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.627451, 0.666667, 0.709804, 1)
-text = "Tecla [A] + Clique Esq: Attack Move (LoL)"
-
-[node name="CtrlRow4" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 7
-
-[node name="Icon" type="TextureRect" parent="VBoxContainer/CtrlRow4"]
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("3_keyboard")
-stretch_mode = 3
-
-[node name="Label" type="Label" parent="VBoxContainer/CtrlRow4"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.627451, 0.666667, 0.709804, 1)
-text = "Tecla [Y]: Alternar Trava de Câmera"
-
-[node name="CtrlRow5" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 7
-
-[node name="Icon" type="TextureRect" parent="VBoxContainer/CtrlRow5"]
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("3_keyboard")
-stretch_mode = 3
-
-[node name="Label" type="Label" parent="VBoxContainer/CtrlRow5"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.627451, 0.666667, 0.709804, 1)
-text = "[Space]: Recentrar Câmera no Campeão"
-
-[node name="CtrlRow6" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 7
-
-[node name="Icon" type="TextureRect" parent="VBoxContainer/CtrlRow6"]
-layout_mode = 2
-mouse_filter = 2
-texture = ExtResource("2_mouse")
-stretch_mode = 3
-
-[node name="Label" type="Label" parent="VBoxContainer/CtrlRow6"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.627451, 0.666667, 0.709804, 1)
-text = "Scroll: Zoom | MMB Drag: Arrastar Câmera"

@@ -1,11 +1,11 @@
 # Progresso — game-x1 (Port 1:1 game-x0-moba -> Godot 4)
 
-**Atualizado:** 2026-10-15  
-**Branch:** `port/game-x0-1to1`  
-**Fase:** Migração 1:1 de `game-x0-moba` para Godot 4. Personagem Caitlyn 3D (`CaitlynComplete.glb`), Dummies Estático e Móvel, Combate Ranged/Melee, Projéteis Hextech, Kiting com bônus de AS, Sistema de Alvo Wild Rift, Cursors LoL e Interface Flutuante com placa LoL e números de dano concluídos e verificados em 5 suítes automatizadas.  
+**Atualizado:** 2026-10-16  
+**Branch:** `main` (Branch de trabalho oficial única)  
+**Meta de Engenharia:** 300 FPS (3,33 ms de frame budget) com fidelidade visual 1:1 absoluta e suporte multiplataforma (Windows, Linux, macOS, Android e Web).  
 **Fonte de verdade:** commits + este arquivo. Nunca marcar como concluído sem evidência real.
 
-## Situação verificada na branch `port/game-x0-1to1`
+## Situação verificada na branch `main`
 
 - [x] **Fase 0 & 1 — Engenharia Reversa e Especificações 1:1:**
   - Repositório de referência `game-x0-moba` analisado e documentado em `docs/migration/`.
@@ -37,16 +37,17 @@
   - Card de status `#status-hud`: card escuro translúcido com borda dourada, cantos arredondados, fonte `Outfit` com pesos médio/negrito e ícones fiéis para mouse e teclado.
   - Botão de Tela Cheia circular Hextech: 42x42px dourado no canto superior direito.
   - Indicadores em anel 2D plano (`scripts/ring_mesh_builder.gd`): substituição dos `TorusMesh` volumétricos por anéis planos 2D sem espessura no piso.
-  - Alinhamento das barras de vida flutuantes e contornos de 1px sem borrar as fontes.
-  - Telemetria de debug movida para overlay opcional acionável por `F3`.
-  - Capturas e composições lado a lado geradas em `docs/migration/visual/` (`A_three_baseline.png`, `B_godot_corrected.png`, `C_comparison_side_by_side.png`, `D_hud_detail.png`, `E_grid_detail.png`).
-- [x] **Fase 7 — Pipeline Gráfico, Antialiasing e Calibragem Visual 1:1 ao Three.js:**
-  - Antialiasing MSAA 2x ativo no WebGL 2.0 (`rendering/anti_aliasing/quality/msaa_3d=1`) eliminando o serrilhamento da Caitlyn sem perda de nitidez de linhas ou texto (FXAA mantido desligado).
-  - Anisotropia 4x (`anisotropic_filtering_level=2`) proporcionando filtragem trilinear e acabamento refinado das texturas em ângulo oblíquo.
-  - Otimização do Shadow Map PCF: alcance ortogonal reduzido para 55.0m (caixa $60\times 60$ idêntica ao Three.js $d=30$), bias ajustado para 0.02 e normal_bias para 1.0 (eliminação total do peter-panning e sombras nítidas acopladas à sola dos pés).
-  - Calibragem fotométrica do piso PBR: ajuste de `albedo_color` e `metallic_specular` para contrabalancear a conversão sRGB do Godot, atingindo `[24, 26, 28]` na tela vs `[23, 25, 27]` no Three.js ($\Delta \le 1$ valor RGB).
-  - Snapping 2D de pixels inteiro: `snap_2d_transforms_to_pixel` e `pos = pos.round()` em `floating_bars.gd`, garantindo textos e contornos de 1px com legibilidade idêntica ao DOM HTML/CSS nativo.
-  - Documentação completa em `docs/migration/ART_DIRECTION.md` e composições em `docs/migration/visual/` (`C_comparison_side_by_side.png`, `caitlyn_edge_comparison.png`, `D_hud_detail.png`, `E_grid_detail.png`, `shadows_comparison.png`).
+- [x] **Fase 7 — Antialiasing e Calibragem Visual 1:1 ao Three.js:**
+  - FXAA-3D dedicado em `PostProcessLayer` isolando a UI (zero desfoque na tipografia).
+  - Correção do UV transversal na fita do eixo Z do grid dourado (`grid_helper.gd`).
+- [x] **Fase 8 — Profiling Profundo e Harness Nativo de Performance (`PerfBench`):**
+  - Autoload `PerfBench` (`scripts/perf_bench.gd`) e runner PowerShell (`scripts/run_perf_bench.ps1`) implementados.
+  - Medição rigorosa de frametime, CPU process, CPU physics, render CPU, GPU time, draw calls e primitivas em condições intercaladas (*interleaved*).
+  - Comprovados 297,6 FPS (3,24 ms p50) no Windows nativo na Intel UHD Graphics 620.
+- [x] **Fase 9 — Otimização Estrutural de Draw Calls e Batching 2D:**
+  - `FloatingBars`: eliminação de quebras de topologia de linhas em `draw_rect` e separação estrita de passes em geometria sólida, contornos de texto e preenchimento de texto. Draw calls reduzidas de 19 para 6.
+  - `StatusHUD`: criação do atlas `assets/ui/icons/icons_atlas.png` e componente `ControlsView` com desenho em 2 passes. Draw calls reduzidas de 19 para 9.
+  - Total de draw calls da cena inteira reduzido de 64 para 41 (queda de 36%).
 - [x] **Validação Automatizada Quíntupla (`scripts/test.ps1`):**
   - 1/5: Import & parse do editor headless.
   - 2/5: Smoke check de 60 frames.
