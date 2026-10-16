@@ -208,3 +208,12 @@ Para atingir 300 FPS (3.33 ms) com antialiasing ativo, a estratégia ideal **nã
 - `tools/analyze_regional_copy.py`: ferramenta de análise de diferenças *pareadas por cenário/run*, média, mediana, consistência do sinal e GPU apenas quando disponível (nativo). Não confunde Web RAF com GPU e avisa sobre caráter exclusivamente diagnóstico.
 - **Para Antigravity após `git pull --ff-only origin main`:** iniciar `scripts/serve_web.ps1` com export atualizado, rodar `node tools/run_regional_copy_web.cjs`, depois `python tools/analyze_regional_copy.py docs/migration/visual/regional_copy_web.json docs/migration/visual/regional_copy_native.json`. Caso o benchmark demore >20min, investigar responsividade e sessão da aba; não registrar números incompletos.
 - **Validação nesta sessão:** checagem estática do runner e do analisador. Godot/Chrome não estão disponíveis aqui, portanto as medições e exportações permanecem pendentes.
+
+---
+
+## ChatGPT — correção do flash branco persistente na morte/respawn dos Dummies
+
+- **Causa:** `take_damage()` chamava `_apply_flash(true)` antes de `_die()`; `update_dummy()` retornava durante o período morto sem decrementar `flash_timer`. A malha podia continuar com o material branco mesmo após respawn.
+- **Solução:** `_die()` e `_respawn()` zeram `flash_timer` e restauram o material original com `_apply_flash(false)`. `set_outline_visible()` só muda `.visible` se houver diferença real, e deixa dummies mortos sempre sem outline.
+- **Regressões testáveis:** `scripts/test_combat.gd` Check 6 agora cobre flash limpo, material de corpo/olhos, bloqueio de outline em morto e restauro após `update_dummy(3.01)`. A estrutura de sete seções originais do teste foi mantida.
+- **Status:** revisão estática do código e testes adicionados, **execução local do Godot pendente**. Após pull, rodar `scripts/test.ps1` e repetir ataque letal no jogo para confirmar o aspecto do respawn no Windows/Web.

@@ -64,6 +64,10 @@ func take_damage(amount: float) -> void:
 func _die() -> void:
 	active = false
 	respawn_timer = 3.0
+	# Damage flashes are not advanced while inactive. Clear them now, or the
+	# corpse and the freshly respawned dummy can remain permanently white.
+	flash_timer = 0.0
+	_apply_flash(false)
 	if tolerance_ring:
 		tolerance_ring.visible = false
 	if outline_mesh:
@@ -76,6 +80,8 @@ func _die() -> void:
 func _respawn() -> void:
 	active = true
 	hp = max_hp
+	flash_timer = 0.0
+	_apply_flash(false)
 	visual_group.rotation.z = 0.0
 	visual_group.position.y = 0.0
 	global_position.x = start_x
@@ -120,5 +126,7 @@ func update_dummy(delta: float) -> void:
 			_apply_flash(false)
 
 func set_outline_visible(vis: bool) -> void:
-	if outline_mesh and active:
-		outline_mesh.visible = vis
+	if outline_mesh:
+		var show := vis and active
+		if outline_mesh.visible != show:
+			outline_mesh.visible = show

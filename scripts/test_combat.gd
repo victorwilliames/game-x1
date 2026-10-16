@@ -98,6 +98,20 @@ func _run_test() -> void:
 	assert_check(dummy_static.hp == 0.0, "Dummy HP drops to 0")
 	assert_check(dummy_static.active == false, "Dummy becomes inactive upon death")
 	assert_check(dummy_static.respawn_timer == 3.0, "Dummy respawn timer set to 3.0s")
+	assert_check(dummy_static.flash_timer == 0.0, "Death clears pending white damage flash")
+	assert_check(dummy_static.body_mesh.material_override == null, "Death restores dummy body material")
+	assert_check(dummy_static.eye_left.material_override == null, "Death restores dummy eye material")
+	dummy_static.set_outline_visible(true)
+	assert_check(not dummy_static.outline_mesh.visible, "Dead dummy stays without target outline")
+	# Simulate expired respawn timer without waiting three wall-clock seconds.
+	dummy_static.update_dummy(3.01)
+	assert_check(dummy_static.active, "Dummy respawns active")
+	assert_check(dummy_static.hp == dummy_static.max_hp, "Dummy respawns at full health")
+	assert_check(dummy_static.flash_timer == 0.0, "Respawn does not resurrect stale white flash")
+	assert_check(dummy_static.body_mesh.material_override == null, "Respawn body material remains original")
+	dummy_static.set_outline_visible(true)
+	assert_check(dummy_static.outline_mesh.visible, "Target outline can reappear on living dummy")
+	dummy_static.set_outline_visible(false)
 
 	# Check 7: Rapid click kiting bonus
 	print("[test_combat] Check 7: Rapid click kiting bonus...")
