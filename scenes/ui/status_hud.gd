@@ -12,18 +12,8 @@ var main_font: Font = null
 var bold_font: Font = null
 
 func _init() -> void:
-	if ResourceLoader.exists("res://assets/fonts/Outfit-Variable.ttf"):
-		var base_f := load("res://assets/fonts/Outfit-Variable.ttf") as FontFile
-		if base_f:
-			var var_normal := FontVariation.new()
-			var_normal.base_font = base_f
-			var_normal.variation_embolden = 0.15
-			main_font = var_normal
-
-			var var_bold := FontVariation.new()
-			var_bold.base_font = base_f
-			var_bold.variation_embolden = 0.45
-			bold_font = var_bold
+	main_font = MobaFonts.outfit_medium()
+	bold_font = MobaFonts.outfit_bold()
 
 func _ready() -> void:
 	# Configure card StyleBox
@@ -58,6 +48,10 @@ func _apply_font_recursive(node: Node, font: Font) -> void:
 	if node is Label:
 		node.add_theme_font_override("font", font)
 		node.add_theme_font_size_override("font_size", 13)
+		node.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+		node.add_theme_constant_override("shadow_offset_x", 1)
+		node.add_theme_constant_override("shadow_offset_y", 1)
+		node.add_theme_constant_override("shadow_outline_size", 1)
 	for child in node.get_children():
 		_apply_font_recursive(child, font)
 

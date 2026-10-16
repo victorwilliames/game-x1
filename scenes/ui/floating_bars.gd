@@ -8,21 +8,14 @@ var hero: Node3D = null
 var dummies: Array = []
 var camera: Camera3D = null
 
-var font: Font = null
+var font_bold: Font = null
+var font_extrabold: Font = null
+var font_black: Font = null
 
 func _init() -> void:
-	if ResourceLoader.exists("res://assets/fonts/Outfit-Variable.ttf"):
-		var f := load("res://assets/fonts/Outfit-Variable.ttf") as FontFile
-		if f:
-			var sys_font := SystemFont.new()
-			sys_font.font_names = PackedStringArray(["Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", "sans-serif"])
-			f.fallbacks = [sys_font]
-			var v := FontVariation.new()
-			v.base_font = f
-			v.variation_embolden = 0.25
-			font = v
-	if not font:
-		font = ThemeDB.fallback_font
+	font_bold = MobaFonts.outfit_bold()
+	font_extrabold = MobaFonts.outfit_extrabold()
+	font_black = MobaFonts.outfit_black()
 
 func setup(p_hero: Node3D, p_dummies: Array, p_camera: Camera3D) -> void:
 	hero = p_hero
@@ -37,27 +30,22 @@ func _draw() -> void:
 	if not camera or not is_instance_valid(camera):
 		return
 
-	var active_font := font if font else ThemeDB.fallback_font
-	var font_size_name := 10
-	var font_size_hp := 9
-	var font_size_lvl := 9
-
-	# 1. Caitlyn (Player) Plate
+	# 1. Caitlyn (Player) Plate - Projected at y + 5.2 (1:1 with Character.ts)
 	if hero and is_instance_valid(hero):
-		var hero_head_pos := hero.global_position + Vector3(0, 6.1, 0)
+		var hero_head_pos := hero.global_position + Vector3(0, 5.2, 0)
 		if not camera.is_position_behind(hero_head_pos):
 			var screen_pt := camera.unproject_position(hero_head_pos)
-			_draw_player_plate(screen_pt, active_font, font_size_name, font_size_hp, font_size_lvl)
+			_draw_player_plate(screen_pt)
 
-	# 2. Dummies (Enemy) Plates
+	# 2. Dummies (Enemy) Plates - Projected at y + 3.4 (1:1 with Dummy.ts)
 	for d in dummies:
 		if d and is_instance_valid(d) and d.get("active") == true:
-			var dummy_head_pos: Vector3 = d.global_position + Vector3(0, 3.8, 0)
+			var dummy_head_pos: Vector3 = d.global_position + Vector3(0, 3.4, 0)
 			if not camera.is_position_behind(dummy_head_pos):
 				var screen_pt := camera.unproject_position(dummy_head_pos)
-				_draw_enemy_plate(d, screen_pt, active_font, font_size_name, font_size_hp)
+				_draw_enemy_plate(d, screen_pt)
 
-func _draw_player_plate(pos: Vector2, p_font: Font, sz_name: int, sz_hp: int, sz_lvl: int) -> void:
+func _draw_player_plate(pos: Vector2) -> void:
 	pos = pos.round()
 	var total_w := 105.0
 	var half_w := total_w * 0.5
@@ -68,17 +56,23 @@ func _draw_player_plate(pos: Vector2, p_font: Font, sz_name: int, sz_hp: int, sz
 	var hp_pct := clampf(cur_hp / maxf(max_hp, 1.0), 0.0, 1.0)
 	var hp_str := "%d / %d (%d%%)" % [roundi(cur_hp), roundi(max_hp), roundi(hp_pct * 100.0)]
 
+	var p_font := font_extrabold if font_extrabold else ThemeDB.fallback_font
+	var p_lvl_font := font_black if font_black else ThemeDB.fallback_font
+	var sz_name := 9
+	var sz_hp := 9
+	var sz_lvl := 9
+
 	# 1. Name text: Caitlyn (top line)
 	var name_str := "Caitlyn"
 	var name_w := p_font.get_string_size(name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name).x
 	var name_pos := Vector2(pos.x - name_w * 0.5, pos.y - 28.0)
-	draw_string_outline(p_font, name_pos, name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name, 1, Color.BLACK)
+	draw_string(p_font, name_pos + Vector2(1, 1), name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name, Color(0, 0, 0, 0.95))
 	draw_string(p_font, name_pos, name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name, Color.WHITE)
 
 	# 2. HP text: 1072 / 1072 (100%) (middle line)
 	var hp_w := p_font.get_string_size(hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp).x
 	var hp_text_pos := Vector2(pos.x - hp_w * 0.5, pos.y - 17.0)
-	draw_string_outline(p_font, hp_text_pos, hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp, 1, Color.BLACK)
+	draw_string(p_font, hp_text_pos + Vector2(1, 1), hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp, Color(0, 0, 0, 0.95))
 	draw_string(p_font, hp_text_pos, hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp, Color(0.0, 1.0, 0.8, 1.0)) # #00ffcc
 
 	# 3. LoL Player Plate (bottom, ending at pos.y)
@@ -89,8 +83,8 @@ func _draw_player_plate(pos: Vector2, p_font: Font, sz_name: int, sz_hp: int, sz
 	draw_rect(lvl_rect, Color(0.07, 0.14, 0.21, 0.95)) # #122436
 	draw_rect(lvl_rect, Color(0.76, 0.62, 0.33, 1.0), false, 1.0) # Gold border #c29d53
 	var lvl_str := "5"
-	var lvl_w := p_font.get_string_size(lvl_str, HORIZONTAL_ALIGNMENT_CENTER, -1, sz_lvl).x
-	draw_string(p_font, Vector2(lvl_rect.position.x + (15.0 - lvl_w) * 0.5, plate_y + 11.5), lvl_str, HORIZONTAL_ALIGNMENT_CENTER, -1, sz_lvl, Color(0.0, 1.0, 0.8, 1.0))
+	var lvl_w := p_lvl_font.get_string_size(lvl_str, HORIZONTAL_ALIGNMENT_CENTER, -1, sz_lvl).x
+	draw_string(p_lvl_font, Vector2(lvl_rect.position.x + (15.0 - lvl_w) * 0.5, plate_y + 11.5), lvl_str, HORIZONTAL_ALIGNMENT_CENTER, -1, sz_lvl, Color(0.0, 1.0, 0.8, 1.0))
 
 	# Bars container (width = 88)
 	var bar_x := left + 17.0
@@ -115,7 +109,7 @@ func _draw_player_plate(pos: Vector2, p_font: Font, sz_name: int, sz_hp: int, sz
 	var mana_fill := Rect2(bar_x, mana_y, bar_w * hp_pct, 3)
 	draw_rect(mana_fill, Color(0.0, 0.75, 1.0, 1.0)) # #00bfff
 
-func _draw_enemy_plate(dummy: Node3D, pos: Vector2, p_font: Font, sz_name: int, sz_hp: int) -> void:
+func _draw_enemy_plate(dummy: Node3D, pos: Vector2) -> void:
 	pos = pos.round()
 	var total_w := 105.0
 	var half_w := total_w * 0.5
@@ -128,6 +122,10 @@ func _draw_enemy_plate(dummy: Node3D, pos: Vector2, p_font: Font, sz_name: int, 
 
 	var mode_str: String = dummy.get("mode") if dummy.get("mode") != null else "static"
 	var name_str := "Dummy (Móvel)" if mode_str == "moving" else "Dummy (Estático)"
+
+	var p_font := font_bold if font_bold else ThemeDB.fallback_font
+	var sz_name := 9
+	var sz_hp := 9
 
 	# 1. Gold framed HP bar at TOP: (height 9)
 	var bar_y := pos.y - 28.0
@@ -146,11 +144,11 @@ func _draw_enemy_plate(dummy: Node3D, pos: Vector2, p_font: Font, sz_name: int, 
 	# 2. Name text centered (middle):
 	var name_w := p_font.get_string_size(name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name).x
 	var name_pos := Vector2(pos.x - name_w * 0.5, pos.y - 14.0)
-	draw_string_outline(p_font, name_pos, name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name, 1, Color.BLACK)
+	draw_string(p_font, name_pos + Vector2(1, 1), name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name, Color(0, 0, 0, 0.95))
 	draw_string(p_font, name_pos, name_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_name, Color.WHITE)
 
 	# 3. HP text centered (bottom):
 	var hp_w := p_font.get_string_size(hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp).x
 	var hp_pos := Vector2(pos.x - hp_w * 0.5, pos.y - 3.0)
-	draw_string_outline(p_font, hp_pos, hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp, 1, Color.BLACK)
+	draw_string(p_font, hp_pos + Vector2(1, 1), hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp, Color(0, 0, 0, 0.95))
 	draw_string(p_font, hp_pos, hp_str, HORIZONTAL_ALIGNMENT_LEFT, -1, sz_hp, Color(0.0, 1.0, 0.8, 1.0))

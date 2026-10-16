@@ -15,12 +15,12 @@ class_name MobaGridHelper
 		divisions = val
 		_rebuild_grid()
 
-@export var color_center: Color = Color(0.88, 0.73, 0.44, 1.0): # #c29d53 unshaded calibrated
+@export var color_center: Color = Color(0.95, 0.78, 0.43, 1.0): # #c29d53 unshaded calibrated
 	set(val):
 		color_center = val
 		_rebuild_grid()
 
-@export var color_grid: Color = Color(0.12, 0.20, 0.28, 1.0): # #162838 unshaded calibrated
+@export var color_grid: Color = Color(0.075, 0.125, 0.175, 1.0): # #162838 unshaded calibrated
 	set(val):
 		color_grid = val
 		_rebuild_grid()
