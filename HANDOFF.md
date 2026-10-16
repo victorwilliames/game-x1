@@ -107,3 +107,13 @@ Investigação profunda com `scripts/profile_draw_calls.gd` revelou que **43 das
    - Mesclar `StatusRow` e `FPSRow` em `ControlsView` para eliminar mais 3-4 draw calls, reduzindo o HUD inteiro para apenas ~3 draw calls.
 3. **Validação em Hardware de Alta Taxa (Telas 120Hz/144Hz/240Hz):**
    - Comprovar 120 FPS cravados em display 120 Hz real.
+
+---
+
+## Continuação ChatGPT: otimização de StatusHUD (validação pendente)
+
+- Branch única: `main`. Implementação preparada sobre `b98bcba`.
+- `scenes/ui/status_hud.gd` e `scenes/ui/status_hud.tscn`: `StatusRow`, `FPSRow` e `ControlsView` passam a um único `ControlsView` de 264 × 214 com passes globais para divisor sólido, atlas de ícones, texto Outfit regular, cabeçalho bold e valores monoespaçados. APIs `set_status()` e `set_fps()` preservadas; redraw apenas em mudança de valor.
+- **Não afirmar redução de draw calls ou aumento de FPS até medição real.** Mudança revisada estaticamente via GitHub, sem compilação local de Godot nesta sessão.
+- Próximo agente, após `git pull --ff-only origin main`: executar `scripts/test.ps1`, `scripts/export_web.ps1`, captura do HUD e `scripts/run_perf_bench.ps1`. Comparar draw calls do HUD isolado e da cena antes/depois; comparar visual em tamanho nativo com captura `b98bcba`; se houver regressão, corrigir ou reverter este incremento.
+- Diferenças de baseline: HUD anterior continha dois HBox com Labels e um ControlsView de 172px; agora os textos de status/FPS são desenhados junto dos controles. Prestar atenção às posições das duas primeiras linhas e altura final do card.

@@ -1,22 +1,30 @@
 class_name StatusHUD
 extends PanelContainer
 
-## 1:1 Port of game-x0-moba #status-hud
-## Dark translucent card (rgba(6, 12, 19, 0.85)) with gold border, Outfit 500/700, and monospace 700 spans.
-## Controls rows are batched into 2 passes (all icons first, all text second) to reduce draw calls from 19 to ~7.
+## 1:1 port of game-x0-moba #status-hud.
+## Draws status/FPS + controls on a single canvas. Geometry, icon atlas,
+## medium Outfit body glyphs, bold heading and monospace values are grouped
+## to avoid separate StatusRow/FPSRow Label draw calls.
+## Text is only reshaped/redrawn when its value changes (FPS sampled every 0.5s).
 
-@onready var status_val: Label = %StatusVal
-@onready var fps_val: Label = %FPSVal
 @onready var controls_view: Control = %ControlsView
 
 var main_font: Font = null
 var bold_font: Font = null
 var mono_bold_font: Font = null
-var _last_fps: int = -1
 var _icons_atlas: Texture2D = null
 
+var _status_text: String = "Pronto!"
+var _fps_text: String = "60"
+var _last_fps: int = -1
+
+const FONT_SIZE := 13
+# Original VBox layout: two ~16px status rows + 5px spacing each.
+const CONTROLS_TOP := 42.0
 const SRC_MOUSE := Rect2(0, 0, 16, 16)
 const SRC_KEYBOARD := Rect2(16, 0, 16, 16)
+const BODY_COLOR := Color(0.6275, 0.6667, 0.7098, 1.0)
+const GOLD_COLOR := Color(1.0, 0.847, 0.541, 1.0)
 
 const CONTROL_ROWS: Array[Dictionary] = [
 	{"icon": SRC_MOUSE, "text": "Clique Direito: Mover Caitlyn / Atacar Alvo"},
@@ -35,7 +43,6 @@ func _init() -> void:
 		_icons_atlas = load("res://assets/ui/icons/icons_atlas.png")
 
 func _ready() -> void:
-	# Configure card StyleBox matching #status-hud in style.css
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(6.0 / 255.0, 12.0 / 255.0, 19.0 / 255.0, 0.85)
 	sb.border_color = Color(194.0 / 255.0, 157.0 / 255.0, 83.0 / 255.0, 0.4)
@@ -50,63 +57,75 @@ func _ready() -> void:
 	sb.shadow_offset = Vector2(0, 8)
 	add_theme_stylebox_override("panel", sb)
 
-	# Apply Outfit Medium (500) to body labels
-	if main_font:
-		_apply_style_recursive(self, main_font)
-
-	# Apply monospace bold (700) to .hud-item span (#loading-status, #fps-counter)
-	if mono_bold_font:
-		if status_val:
-			status_val.add_theme_font_override("font", mono_bold_font)
-			status_val.add_theme_font_size_override("font_size", 13)
-		if fps_val:
-			fps_val.add_theme_font_override("font", mono_bold_font)
-			fps_val.add_theme_font_size_override("font_size", 13)
-
-	# Connect batched draw for ControlsView
 	if controls_view:
 		controls_view.draw.connect(_on_controls_view_draw)
 		controls_view.queue_redraw()
-
-func _apply_style_recursive(node: Node, font: Font) -> void:
-	if node is Label:
-		node.add_theme_font_override("font", font)
-		node.add_theme_font_size_override("font_size", 13)
-	for child in node.get_children():
-		_apply_style_recursive(child, font)
 
 func _on_controls_view_draw() -> void:
 	if not controls_view:
 		return
 
-	# 1. Divider line matching style.css: border-top: 1px solid rgba(194, 157, 83, 0.3)
-	controls_view.draw_line(Vector2(0, 3), Vector2(controls_view.size.x, 3), Color(0.7608, 0.6157, 0.3255, 0.3), 1.0)
+	# One filled quad instead of PRIMITIVE_LINES for the gold divider.
+	controls_view.draw_rect(
+		Rect2(0.0, CONTROLS_TOP + 3.0, controls_view.size.x, 1.0),
+		Color(0.7608, 0.6157, 0.3255, 0.3)
+	)
 
-	# 2. PASS 1: All icons from the single 32x16 atlas texture (1 single draw call!)
+	# Pass 1: all mouse/keyboard icons share one atlas.
 	if _icons_atlas:
 		for i in range(CONTROL_ROWS.size()):
-			var ry: float = 33.0 + float(i * 23)
-			var dst := Rect2(0.0, ry + 1.0, 16.0, 16.0)
-			controls_view.draw_texture_rect_region(_icons_atlas, dst, CONTROL_ROWS[i].icon)
+			var ry: float = CONTROLS_TOP + 33.0 + float(i * 23)
+			controls_view.draw_texture_rect_region(
+				_icons_atlas,
+				Rect2(0.0, ry + 1.0, 16.0, 16.0),
+				CONTROL_ROWS[i].icon
+			)
 
-	# 3. PASS 2: Header "Controles:" and all 6 control rows (batched font atlas pass)
-	if bold_font:
-		var ascent_bold := bold_font.get_ascent(13)
-		controls_view.draw_string(bold_font, Vector2(0.0, 10.0 + ascent_bold), "Controles:", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.847, 0.541, 1.0))
-
+	# Pass 2: medium Outfit body text (static labels and control descriptions).
 	if main_font:
-		var ascent_med := main_font.get_ascent(13)
-		var text_color := Color(0.6275, 0.6667, 0.7098, 1.0)
+		var ascent_med := main_font.get_ascent(FONT_SIZE)
+		controls_view.draw_string(main_font, Vector2(0.0, ascent_med), "Status: ", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, BODY_COLOR)
+		controls_view.draw_string(main_font, Vector2(0.0, 21.0 + ascent_med), "FPS: ", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, BODY_COLOR)
 		for i in range(CONTROL_ROWS.size()):
-			var ry: float = 33.0 + float(i * 23)
-			var text_pos := Vector2(23.0, ry + ascent_med + 1.0)
-			controls_view.draw_string(main_font, text_pos, CONTROL_ROWS[i].text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, text_color)
+			var ry: float = CONTROLS_TOP + 33.0 + float(i * 23)
+			controls_view.draw_string(
+				main_font,
+				Vector2(23.0, ry + ascent_med + 1.0),
+				CONTROL_ROWS[i].text,
+				HORIZONTAL_ALIGNMENT_LEFT,
+				-1,
+				FONT_SIZE,
+				BODY_COLOR
+			)
 
-func set_status(text: String) -> void:
-	if status_val and status_val.text != text:
-		status_val.text = text
+	# Pass 3: bold Outfit heading.
+	if bold_font:
+		controls_view.draw_string(
+			bold_font,
+			Vector2(0.0, CONTROLS_TOP + 10.0 + bold_font.get_ascent(FONT_SIZE)),
+			"Controles:",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR
+		)
+
+	# Pass 4: changing values use the original monospace bold font.
+	if mono_bold_font and main_font:
+		var ascent_mono := mono_bold_font.get_ascent(FONT_SIZE)
+		var status_x := main_font.get_string_size("Status: ", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+		var fps_x := main_font.get_string_size("FPS: ", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+		controls_view.draw_string(mono_bold_font, Vector2(status_x, ascent_mono), _status_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR)
+		controls_view.draw_string(mono_bold_font, Vector2(fps_x, 21.0 + ascent_mono), _fps_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, GOLD_COLOR)
+
+func set_status(value: String) -> void:
+	if _status_text == value:
+		return
+	_status_text = value
+	if controls_view:
+		controls_view.queue_redraw()
 
 func set_fps(fps: int) -> void:
-	if fps != _last_fps and fps_val:
-		_last_fps = fps
-		fps_val.text = str(fps)
+	if fps == _last_fps:
+		return
+	_last_fps = fps
+	_fps_text = str(fps)
+	if controls_view:
+		controls_view.queue_redraw()
