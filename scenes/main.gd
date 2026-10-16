@@ -48,6 +48,33 @@ var frame_time_count: int = 0
 var last_fps_update_time: float = 0.0
 var cached_raf_hz: int = 0
 
+# Browser benchmark commands are rare. Poll a single atomic bitmask 20 times/second,
+# rather than calling JavaScriptBridge.eval() three times on every render frame.
+# Bit pairs: 0/1 = FXAA present/value, 2/3 = MSAA, 4/5 = shadows.
+const WEB_COMMAND_POLL_SECONDS: float = 0.05
+const WEB_COMMANDS_JS: String = """
+(function () {
+    var mask = 0;
+    if (window._cmd_set_fxaa !== undefined) {
+        mask |= 1;
+        if (window._cmd_set_fxaa == 1) mask |= 2;
+        delete window._cmd_set_fxaa;
+    }
+    if (window._cmd_set_msaa !== undefined) {
+        mask |= 4;
+        if (window._cmd_set_msaa == 1) mask |= 8;
+        delete window._cmd_set_msaa;
+    }
+    if (window._cmd_set_shadows !== undefined) {
+        mask |= 16;
+        if (window._cmd_set_shadows == 1) mask |= 32;
+        delete window._cmd_set_shadows;
+    }
+    return mask;
+})()
+"""
+var _web_command_poll_elapsed: float = 0.0
+
 var range_mat: Material
 
 func _ready() -> void:
@@ -371,28 +398,10 @@ func _process(delta: float) -> void:
 		return
 
 	if OS.has_feature("web"):
-		var cmd_fxaa = JavaScriptBridge.eval("window._cmd_set_fxaa !== undefined ? window._cmd_set_fxaa : -1;")
-		if cmd_fxaa == 1 and fxaa_effect and not fxaa_effect.visible:
-			fxaa_effect.visible = true
-			JavaScriptBridge.eval("delete window._cmd_set_fxaa;")
-			_update_hud()
-		elif cmd_fxaa == 0 and fxaa_effect and fxaa_effect.visible:
-			fxaa_effect.visible = false
-			JavaScriptBridge.eval("delete window._cmd_set_fxaa;")
-			_update_hud()
-
-		var cmd_msaa = JavaScriptBridge.eval("window._cmd_set_msaa !== undefined ? window._cmd_set_msaa : -1;")
-		if cmd_msaa != -1:
-			var vp := get_viewport()
-			vp.msaa_3d = Viewport.MSAA_2X if cmd_msaa == 1 else Viewport.MSAA_DISABLED
-			JavaScriptBridge.eval("delete window._cmd_set_msaa;")
-			_update_hud()
-
-		var cmd_shad = JavaScriptBridge.eval("window._cmd_set_shadows !== undefined ? window._cmd_set_shadows : -1;")
-		if cmd_shad != -1 and directional_light:
-			directional_light.shadow_enabled = (cmd_shad == 1)
-			JavaScriptBridge.eval("delete window._cmd_set_shadows;")
-			_update_hud()
+		_web_command_poll_elapsed += delta
+		if _web_command_poll_elapsed >= WEB_COMMAND_POLL_SECONDS:
+			_web_command_poll_elapsed = 0.0
+			_poll_web_commands()
 
 	# 1. Update Dummies
 	for d in dummies:
@@ -444,6 +453,36 @@ func _process(delta: float) -> void:
 
 	# 8. FPS and Telemetry
 	_update_telemetry(delta)
+
+# This method only runs on the Web build at 20 Hz. One JS evaluation consumes
+# every pending benchmark toggle atomically; repeated commands do not stay queued.
+func _poll_web_commands() -> void:
+	var command_mask := int(JavaScriptBridge.eval(WEB_COMMANDS_JS, true))
+	if command_mask == 0:
+		return
+
+	var changed := false
+	if (command_mask & 1) != 0 and fxaa_effect:
+		var fxaa_enabled := (command_mask & 2) != 0
+		if fxaa_effect.visible != fxaa_enabled:
+			fxaa_effect.visible = fxaa_enabled
+			changed = true
+
+	if (command_mask & 4) != 0:
+		var vp := get_viewport()
+		var new_msaa := Viewport.MSAA_2X if (command_mask & 8) != 0 else Viewport.MSAA_DISABLED
+		if vp.msaa_3d != new_msaa:
+			vp.msaa_3d = new_msaa
+			changed = true
+
+	if (command_mask & 16) != 0 and directional_light:
+		var shadows_enabled := (command_mask & 32) != 0
+		if directional_light.shadow_enabled != shadows_enabled:
+			directional_light.shadow_enabled = shadows_enabled
+			changed = true
+
+	if changed:
+		_update_hud()
 
 func _update_hover_and_cursor() -> void:
 	var mouse_pos = get_viewport().get_mouse_position()

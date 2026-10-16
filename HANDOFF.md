@@ -90,3 +90,13 @@ Dados reais coletados pelo harness `scripts/perf_bench.gd` via `scripts/run_perf
    - Avaliar early-stencil ou masking por profundidade/silhueta da Caitlyn e Dummies, evitando amostragem nos pixels do piso estático escuro.
 2. **Validação em Telas de Alta Taxa (120 Hz, 144 Hz, 240 Hz):**
    - Com o motor entregando 210–250 FPS com FXAA e 320–360 FPS sem FXAA, o jogo está totalmente pronto para travar com folga em monitores de 120 Hz e 240 Hz.
+
+---
+
+## ChatGPT: redução de comunicação Godot ↔ JavaScript por quadro (validação pendente)
+
+- **Base:** `975e020`, branch única `main`.
+- `scenes/main.gd`: três chamadas `JavaScriptBridge.eval` em cada `_process()`, consultando `window._cmd_set_fxaa`, `window._cmd_set_msaa` e `window._cmd_set_shadows`, foram substituídas por **uma avaliação a cada 50 ms (20 Hz)**, usando um bitmask de 6 bits. Consumo e remoção dos três comandos são atômicos dentro da mesma função JavaScript.
+- As teclas locais F1/F2/F4 não são modificadas. Comandos do benchmark/Web continuam com o mesmo nome e comportamento final; latência máxima típica de aplicação ~50 ms enquanto o jogo renderiza normalmente. Um comando repetido com o estado já configurado é consumido sem redesenho desnecessário.
+- **Status:** revisão estática realizada via GitHub; **compilação e medição de FPS NÃO executadas aqui**. Não registrar ganho de FPS até A/B real. Teste funcional dos comandos ON/OFF, inclusive repetição de mesmo estado e simultaneidade; validar no Web/Chrome e Windows.
+- **Validação comparativa solicitada ao Antigravity:** sincronizar `main`, rodar `scripts/test.ps1`, `scripts/export_web.ps1`, `tools/run_benchmarks.cjs` e `scripts/run_perf_bench.ps1`; comparar `975e020` contra novo commit com Web Chrome e condições equivalentes; medir custo JS/CPU se possível. Caso apresente regressão ou problemas de tipagem/sintaxe GDScript, corrigir imediatamente.
