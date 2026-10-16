@@ -199,3 +199,12 @@ Para atingir 300 FPS (3.33 ms) com antialiasing ativo, a estratégia ideal **nã
 - `AGENTS.md` e `README.md`: eliminadas instruções obsoletas para publicar na antiga branch e descrição de bonecos-palito. `PROGRESS.md`: aviso sobre conteúdo histórico para evitar decisões equivocadas.
 - **Teste local pendente:** Godot/Chrome não estão instalados/acessíveis neste ambiente. Validar as 5 suítes, o indicador verde/rosa com tecla A, export Web e captura visual.
 - **Pendência visual reportada pelo usuário:** textos de 9px acima dos personagens e dummies ainda aparentam serrilhado. Revisar antialiasing/hinting da fonte Outfit, projeção arredondada e densidade de pixels antes de alterar os tamanhos aprovados; NÃO aplicar blur do FXAA sobre HUD.
+
+---
+
+## Turno ChatGPT — ferramentas de diagnóstico Web para BackBufferCopy parcial
+
+- `tools/run_regional_copy_web.cjs` criado a partir do runner Chrome previamente validado de FXAA. Usa o mesmo Puppeteer/Chrome e flags, mas executa `pass_only,crop_draw,crop_copy,no_fxaa,full`, 3 execuções, 12s/cenário, 6s warmup. Valida rigorosamente que existem **75 registros** (5 modos × 5 cenários × 3 execuções) antes de publicar o JSON `docs/migration/visual/regional_copy_web.json`.
+- `tools/analyze_regional_copy.py`: ferramenta de análise de diferenças *pareadas por cenário/run*, média, mediana, consistência do sinal e GPU apenas quando disponível (nativo). Não confunde Web RAF com GPU e avisa sobre caráter exclusivamente diagnóstico.
+- **Para Antigravity após `git pull --ff-only origin main`:** iniciar `scripts/serve_web.ps1` com export atualizado, rodar `node tools/run_regional_copy_web.cjs`, depois `python tools/analyze_regional_copy.py docs/migration/visual/regional_copy_web.json docs/migration/visual/regional_copy_native.json`. Caso o benchmark demore >20min, investigar responsividade e sessão da aba; não registrar números incompletos.
+- **Validação nesta sessão:** checagem estática do runner e do analisador. Godot/Chrome não estão disponíveis aqui, portanto as medições e exportações permanecem pendentes.
