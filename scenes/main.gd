@@ -47,7 +47,7 @@ var frame_time_count: int = 0
 var last_fps_update_time: float = 0.0
 var cached_raf_hz: int = 0
 
-var range_mat: StandardMaterial3D
+var range_mat: Material
 
 func _ready() -> void:
 	is_headless = DisplayServer.get_name() == "headless"
@@ -85,13 +85,9 @@ func _ready() -> void:
 
 	# Setup Range Indicator (Flat 2D ring matching THREE.RingGeometry)
 	if range_indicator and hero:
-		var r_mesh = RingMeshBuilder.create_ring_mesh(hero.attack_range - 0.08, hero.attack_range + 0.08, 64)
+		var r_mesh = RingMeshBuilder.create_ring_mesh(hero.attack_range - 0.25, hero.attack_range + 0.25, 128)
 		range_indicator.mesh = r_mesh
-		range_mat = StandardMaterial3D.new()
-		range_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		range_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		range_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		range_mat.albedo_color = Color(0, 1, 0.533, 0.12) # #00ff88, opacity 0.12
+		range_mat = RingMeshBuilder.create_smooth_ring_material(hero.attack_range - 0.08, hero.attack_range + 0.08, Color(0, 1, 0.533, 0.12))
 		range_indicator.material_override = range_mat
 
 	# Setup PointTarget material
@@ -110,12 +106,8 @@ func _ready() -> void:
 	if target_marker:
 		var marker_mesh_node = target_marker.get_node_or_null("MarkerMesh") as MeshInstance3D
 		if marker_mesh_node:
-			marker_mesh_node.mesh = RingMeshBuilder.create_ring_mesh(0.75, 0.95, 32)
-			var marker_mat = StandardMaterial3D.new()
-			marker_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			marker_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			marker_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-			marker_mat.albedo_color = Color(1.0, 0.231, 0.188, 0.7) # #ff3b30
+			marker_mesh_node.mesh = RingMeshBuilder.create_ring_mesh(0.65, 1.05, 64)
+			var marker_mat = RingMeshBuilder.create_smooth_ring_material(0.75, 0.95, Color(1.0, 0.231, 0.188, 0.7))
 			marker_mesh_node.material_override = marker_mat
 		target_marker.visible = false
 
@@ -389,7 +381,9 @@ func _process(delta: float) -> void:
 		range_indicator.global_position = hero.global_position + Vector3(0, 0.02, 0)
 		if range_mat:
 			var target_col := Color(1.0, 0.0, 0.33, 0.35) if is_attack_move_mode else Color(0.0, 1.0, 0.533, 0.12)
-			if range_mat.albedo_color != target_col:
+			if range_mat is ShaderMaterial:
+				range_mat.set_shader_parameter("ring_color", target_col)
+			elif range_mat is StandardMaterial3D and range_mat.albedo_color != target_col:
 				range_mat.albedo_color = target_col
 
 	# 5. Update Target Marker on selected dummy

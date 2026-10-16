@@ -47,10 +47,8 @@ func _ready() -> void:
 	if tolerance_ring:
 		var border_node := tolerance_ring.get_node_or_null("Border") as MeshInstance3D
 		if border_node:
-			var border_mat := border_node.get_active_material(0)
-			border_node.mesh = RingMeshBuilder.create_ring_mesh(2.95, 3.0, 64)
-			if border_mat:
-				border_node.material_override = border_mat
+			border_node.mesh = RingMeshBuilder.create_ring_mesh(2.85, 3.10, 96)
+			border_node.material_override = RingMeshBuilder.create_smooth_ring_material(2.95, 3.00, Color(0.6667, 0.0, 1.0, 0.32))
 
 func take_damage(amount: float) -> void:
 	if not active:

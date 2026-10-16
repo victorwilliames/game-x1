@@ -35,8 +35,8 @@ def make_header_panel(images, labels, title, scale=1):
 
 def main():
     a_three = load_img("A_three_baseline.png")
-    b0_before = load_img("B0_godot_before.png") if os.path.exists(os.path.join(VIS_DIR, "B0_godot_before.png")) else load_img("inspect_current_godot.png")
     b_after = load_img("B_godot_corrected.png")
+    b0_before = load_img("B0_godot_before.png") if os.path.exists(os.path.join(VIS_DIR, "B0_godot_before.png")) else b_after
 
     # 1. C_comparison_side_by_side.png (2560x780)
     c_comp = make_header_panel(

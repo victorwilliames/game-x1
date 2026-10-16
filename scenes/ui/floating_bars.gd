@@ -50,9 +50,9 @@ const DIAG_OFFSETS: Array[Vector2] = [
 ]
 
 func _init() -> void:
-	font_bold = MobaFonts.outfit_bold()
-	font_extrabold = MobaFonts.outfit_extrabold()
-	font_black = MobaFonts.outfit_black()
+	font_bold = MobaFonts.get_outfit(700, 1)
+	font_extrabold = MobaFonts.get_outfit(800, 1)
+	font_black = MobaFonts.get_outfit(900, 0)
 
 	_tl_player_name.add_string("Caitlyn", font_extrabold, SZ_NAME)
 	_tl_player_lvl.add_string("5", font_black, SZ_LVL)
@@ -146,9 +146,9 @@ func _process(_delta: float) -> void:
 func _draw_tl_shadowed(tl: TextLine, pos: Vector2, col: Color) -> void:
 	var ci := get_canvas_item()
 	var p := pos.round()
-	# Drop shadow + cached outline drawn behind foreground glyph (3 calls instead of 10)
-	tl.draw(ci, p + Vector2(0, 2), Color(0, 0, 0, 0.65))
-	tl.draw_outline(ci, p, 3, Color(0, 0, 0, 0.96))
+	# Clean 1px outline + 1px drop shadow matching CSS text-shadow: 1px 1px 1px #000, -1px -1px 1px #000
+	tl.draw_outline(ci, p, 1, Color(0, 0, 0, 0.92))
+	tl.draw(ci, p + Vector2(0, 1), Color(0, 0, 0, 0.65))
 	tl.draw(ci, p, col)
 
 func _draw() -> void:

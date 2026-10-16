@@ -1,89 +1,89 @@
 {
-  "timestamp": "2026-10-16T13:55:49.386Z",
+  "timestamp": "2026-10-16T14:36:01.297Z",
   "viewport": "1280x720 (deviceScaleFactor=1)",
   "uncapped": {
     "threejs": {
       "idle": {
-        "samples": 201,
-        "avgMs": 10.99,
-        "p95Ms": 21.2,
-        "p99Ms": 29.3,
-        "avgFps": 91,
-        "low1Fps": 34
-      },
-      "movement": {
-        "samples": 221,
-        "avgMs": 10.07,
-        "p95Ms": 17.7,
-        "p99Ms": 33,
-        "avgFps": 99,
+        "samples": 227,
+        "avgMs": 9.75,
+        "p95Ms": 19.1,
+        "p99Ms": 32.8,
+        "avgFps": 103,
         "low1Fps": 30
       },
+      "movement": {
+        "samples": 161,
+        "avgMs": 13.78,
+        "p95Ms": 33.1,
+        "p99Ms": 41,
+        "avgFps": 73,
+        "low1Fps": 24
+      },
       "kiting": {
-        "samples": 298,
-        "avgMs": 7.41,
-        "p95Ms": 11.9,
-        "p99Ms": 15.5,
-        "avgFps": 135,
-        "low1Fps": 65
+        "samples": 242,
+        "avgMs": 9.17,
+        "p95Ms": 18.4,
+        "p99Ms": 30.9,
+        "avgFps": 109,
+        "low1Fps": 32
       },
       "damage": {
-        "samples": 308,
-        "avgMs": 7.18,
-        "p95Ms": 13.5,
-        "p99Ms": 18.5,
-        "avgFps": 139,
-        "low1Fps": 54
+        "samples": 238,
+        "avgMs": 9.32,
+        "p95Ms": 16.1,
+        "p99Ms": 19.5,
+        "avgFps": 107,
+        "low1Fps": 51
       },
       "camera": {
-        "samples": 243,
-        "avgMs": 9.12,
-        "p95Ms": 17,
-        "p99Ms": 19.6,
-        "avgFps": 110,
-        "low1Fps": 51
+        "samples": 256,
+        "avgMs": 8.66,
+        "p95Ms": 16.2,
+        "p99Ms": 27.8,
+        "avgFps": 115,
+        "low1Fps": 36
       }
     },
     "godot4": {
       "idle": {
-        "samples": 147,
-        "avgMs": 15.03,
-        "p95Ms": 33.25,
-        "p99Ms": 34.37,
-        "avgFps": 67,
-        "low1Fps": 29
+        "samples": 109,
+        "avgMs": 20.4,
+        "p95Ms": 34.69,
+        "p99Ms": 36.79,
+        "avgFps": 49,
+        "low1Fps": 27
       },
       "movement": {
-        "samples": 137,
-        "avgMs": 16.24,
-        "p95Ms": 31.94,
-        "p99Ms": 33.89,
-        "avgFps": 62,
-        "low1Fps": 30
+        "samples": 61,
+        "avgMs": 26.14,
+        "p95Ms": 29.75,
+        "p99Ms": 79.49,
+        "avgFps": 38,
+        "low1Fps": 13
       },
       "kiting": {
-        "samples": 151,
-        "avgMs": 14.69,
-        "p95Ms": 33.89,
-        "p99Ms": 35.33,
-        "avgFps": 68,
-        "low1Fps": 28
+        "samples": 96,
+        "avgMs": 23.27,
+        "p95Ms": 33.54,
+        "p99Ms": 37.68,
+        "avgFps": 43,
+        "low1Fps": 27
       },
       "damage": {
-        "samples": 190,
-        "avgMs": 11.67,
-        "p95Ms": 18.32,
-        "p99Ms": 33.39,
-        "avgFps": 86,
-        "low1Fps": 30
+        "samples": 99,
+        "avgMs": 22.47,
+        "p95Ms": 34.64,
+        "p99Ms": 36.44,
+        "avgFps": 45,
+        "low1Fps": 27
       },
       "camera": {
-        "samples": 228,
-        "avgMs": 9.71,
-        "p95Ms": 13.15,
-        "p99Ms": 17.47,
-        "avgFps": 103,
-        "low1Fps": 57
+        "samples": 118,
+        "avgMs": 18.75,
+        "p95Ms": 33.13,
+        "p99Ms": 36.71,
+        "avgFps": 53,
+        "low1Fps": 27
       }
     }
   },
@@ -91,85 +91,85 @@
     "threejs": {
       "idle": {
         "samples": 132,
-        "avgMs": 16.67,
-        "p95Ms": 17,
-        "p99Ms": 17.1,
+        "avgMs": 16.66,
+        "p95Ms": 16.8,
+        "p99Ms": 16.9,
         "avgFps": 60,
-        "low1Fps": 58
+        "low1Fps": 59
       },
       "movement": {
-        "samples": 127,
-        "avgMs": 17.32,
+        "samples": 125,
+        "avgMs": 17.6,
         "p95Ms": 16.9,
-        "p99Ms": 17.1,
-        "avgFps": 58,
-        "low1Fps": 58
+        "p99Ms": 66.7,
+        "avgFps": 57,
+        "low1Fps": 15
       },
       "kiting": {
-        "samples": 132,
-        "avgMs": 16.67,
-        "p95Ms": 16.9,
-        "p99Ms": 17.1,
-        "avgFps": 60,
-        "low1Fps": 58
+        "samples": 129,
+        "avgMs": 17.05,
+        "p95Ms": 16.8,
+        "p99Ms": 16.8,
+        "avgFps": 59,
+        "low1Fps": 60
       },
       "damage": {
         "samples": 132,
         "avgMs": 16.67,
         "p95Ms": 16.8,
-        "p99Ms": 16.9,
+        "p99Ms": 16.8,
         "avgFps": 60,
-        "low1Fps": 59
+        "low1Fps": 60
       },
       "camera": {
         "samples": 132,
         "avgMs": 16.67,
         "p95Ms": 16.8,
-        "p99Ms": 16.9,
+        "p99Ms": 16.8,
         "avgFps": 60,
-        "low1Fps": 59
+        "low1Fps": 60
       }
     },
     "godot4": {
       "idle": {
-        "samples": 133,
-        "avgMs": 16.66,
-        "p95Ms": 16.78,
-        "p99Ms": 16.96,
-        "avgFps": 60,
-        "low1Fps": 59
+        "samples": 115,
+        "avgMs": 19.27,
+        "p95Ms": 33.67,
+        "p99Ms": 33.91,
+        "avgFps": 52,
+        "low1Fps": 29
       },
       "movement": {
-        "samples": 132,
+        "samples": 133,
         "avgMs": 16.67,
-        "p95Ms": 16.81,
-        "p99Ms": 16.96,
+        "p95Ms": 16.88,
+        "p99Ms": 16.99,
         "avgFps": 60,
         "low1Fps": 59
       },
       "kiting": {
-        "samples": 133,
-        "avgMs": 16.67,
-        "p95Ms": 16.78,
-        "p99Ms": 16.91,
-        "avgFps": 60,
-        "low1Fps": 59
+        "samples": 127,
+        "avgMs": 17.32,
+        "p95Ms": 17.12,
+        "p99Ms": 33.56,
+        "avgFps": 58,
+        "low1Fps": 30
       },
       "damage": {
-        "samples": 130,
-        "avgMs": 16.92,
-        "p95Ms": 16.86,
-        "p99Ms": 33.36,
-        "avgFps": 59,
+        "samples": 120,
+        "avgMs": 18.33,
+        "p95Ms": 33.36,
+        "p99Ms": 33.61,
+        "avgFps": 55,
         "low1Fps": 30
       },
       "camera": {
-        "samples": 131,
-        "avgMs": 16.79,
-        "p95Ms": 16.85,
-        "p99Ms": 17.08,
-        "avgFps": 60,
-        "low1Fps": 59
+        "samples": 122,
+        "avgMs": 18.17,
+        "p95Ms": 33.53,
+        "p99Ms": 33.68,
+        "avgFps": 55,
+        "low1Fps": 30
       }
     }
   }

@@ -28,15 +28,8 @@ static func get_outfit(weight: int = 500, extra_spacing_glyph: int = 0) -> Font:
 
 	var v := FontVariation.new()
 	v.base_font = base_f
-	# Compensate FreeType vs Chrome DirectWrite stem darkening on dark backgrounds
-	var eff_weight := clampi(weight + 40, 100, 900)
-	v.variation_opentype = { WGHT_TAG: float(eff_weight) }
-	if weight <= 500:
-		v.variation_embolden = 0.08
-	elif weight <= 700:
-		v.variation_embolden = 0.12
-	else:
-		v.variation_embolden = 0.14
+	v.variation_opentype = { WGHT_TAG: float(clampi(weight, 100, 900)) }
+	v.variation_embolden = 0.0
 	if extra_spacing_glyph != 0:
 		v.spacing_glyph = extra_spacing_glyph
 	_cached_fonts[key] = v

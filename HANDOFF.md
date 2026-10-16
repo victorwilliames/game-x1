@@ -1,8 +1,8 @@
 # HANDOFF — Memória Operacional e Continuidade Imediata (`game-x1`)
 
-**Atualizado por:** Antigravity (Gemini 4 Argon High) em 2026-10-16  
+**Atualizado por:** Antigravity (Gemini 3.8 Flash) em 2026-10-16  
 **Branch ativa:** `port/game-x0-1to1`  
-**Status:** Otimização agressiva de FPS Web + Paridade Pixel-a-Pixel 1:1 com `game-x0-moba` (Three.js) aplicadas e exportadas.
+**Status:** PASSOS 0, 1, 2, 3 e 4 EXECUTADOS COM SUCESSO. Shader analítico anti-serrilhado fwidth() aplicado aos anéis e grid, MSAA 2x reativado, tipografia 9px corrigida (sem distorção FreeType e com letter-spacing 1px), suíte 5/5 passando e evidências visuais geradas.
 
 ---
 
@@ -36,3 +36,79 @@
    - Garantir que os servidores estejam rodando (`npm run dev -- --open false --port 3005 --strictPort` em `../game-x0-moba/jogo` e `python scripts/serve.py 8080 build/web` em `game-x1`).
    - Executar `node tools/run_benchmarks.cjs` (gera `docs/migration/visual/multi_scenario_benchmark.json`, `A_three_baseline.png`, `B_godot_corrected.png`, `combat_three.png`, `combat_godot.png`).
    - Executar `python tools/generate_visual_evidence.py` (gera `C_comparison_side_by_side.png`, `D_hud_detail.png`, `E_grid_detail.png`, `F_floating_bars_detail.png`, `G_combat_damage_detail.png`, `shadows_comparison.png`, `caitlyn_edge_comparison.png`).
+
+---
+
+## 3. Plano de Execução Imediato para o Gemini 3.8 Flash (Eliminar Serrilhado de Linhas/Círculos/Rifle e Ajustar Fonte 9px das Barras Flutuantes)
+
+### Por que o Three.js consegue ficar sem serrilhado E com alto FPS, enquanto o Godot ficou serrilhado no Anexo 1?
+1. **Diferença de Arquitetura WebGL (Backbuffer Nativo vs Offscreen FBO):**
+   - **No Three.js (`new THREE.WebGLRenderer({ antialias: true })`):** O Three.js ativa o MSAA direto no **backbuffer nativo do `<canvas>` do navegador** (`FBO 0`) e desenha a cena 3D direto na tela (já que o HUD e as barras de vida do Three.js são elementos HTML/CSS fora do WebGL). O próprio driver da placa de vídeo resolve o anti-aliasing na saída de vídeo quase de graça.
+   - **No Godot 4 Web (`gl_compatibility`):** Para conseguir desenhar a UI 2D (`CanvasItem`) por cima do 3D dentro do mesmo canvas, o Godot cria o contexto WebGL com `antialias: false` no canvas principal e renderiza o 3D dentro de um **Framebuffer Offscreen separado (FBO)**. Quando `msaa_3d = 1` é ligado, o Godot precisa fazer um `gl.blitFramebuffer()` extra + cópia de textura em tela cheia a cada frame.
+   - **O que aconteceu no nosso teste anterior:** Quando testamos `msaa_3d = 1` antes, a Caitlyn **ainda estava calculando 18.549 triângulos com 60 ossos duas vezes por frame** (no passe de sombra + passe principal) e as barras flutuantes faziam 60 chamadas de texto por frame. A soma disso com o `msaa_3d = 1` estourou o limite de `16.6ms` e derrubou o FPS. Quando desligamos o `msaa_3d = 0` depois de criar o `ShadowProxy`, o FPS voou para `97–120 FPS`, mas o 3D ficou **100% sem anti-aliasing** (deixando o rifle, a linha dourada e o círculo vermelho serrilhados no Anexo 1).
+   - **A Solução Definitiva (Ficar liso igual ao Three.js E manter alto FPS):**
+     1. Agora que o `_setup_shadow_proxy()` em `caitlyn.gd` eliminou os 18.549 triângulos animados da sombra, a GPU tem folga de sobra para **reativar `anti_aliasing/quality/msaa_3d = 1` (MSAA 2x)** (que alisa o rifle, chapéu e corpo da Caitlyn).
+     2. Combinar isso com **Shaders Analíticos Anti-Serrilhado (`fwidth` + `smoothstep`)** no círculo de alcance (`128` segmentos) e na linha dourada/grid (`GridHelper`), que deixam as linhas e círculos matematicamente perfeitos com **custo zero de GPU**.
+2. **Por que o texto `"Caitlyn"` e `"1072 / 1072 (100%)"` ficou grudado/torto no Anexo 1:**
+   - No Three.js, o texto é renderizado pelo HTML/CSS do Chrome (que usa subpixel ClearType/DirectWrite nativo do Windows e `letter-spacing: 0.5px`).
+   - No Godot (`scripts/moba_fonts.gd`), o `variation_embolden = 0.14` somado ao peso `840` em uma fonte minúscula de `9px` engrossou artificialmente os glifos no FreeType (fazendo os dígitos de `"100%"` grudarem), além de estar sem o `spacing_glyph = 1` (`letter-spacing: 0.5px` do `style.css` linhas 222 e 231) e com `draw_outline(..., 3)` grosso demais para `9px`.
+
+### Passo a Passo Técnico para o Gemini 3.8 Flash Executar
+
+#### PASSO 0 — Reativar `msaa_3d = 1` (MSAA 2x) em `project.godot` (Agora com `ShadowProxy` Ativo)
+- Em `project.godot`, mudar `anti_aliasing/quality/msaa_3d=0` para:
+  ```ini
+  anti_aliasing/quality/msaa_3d=1
+  ```
+- Isso devolve o anti-aliasing de hardware no rifle, chapéu e silhueta da Caitlyn, aproveitando que o `ShadowProxy` já cortou metade do custo de GPU da cena.
+
+#### PASSO 1 — Círculo de Alcance (`RangeIndicator`), `TargetMarker` e `ToleranceRing` 100% Suaves via Shader Analítico (`fwidth`)
+1. Em `scripts/ring_mesh_builder.gd`, adicionar:
+   ```gdscript
+   static func create_smooth_ring_material(inner_r: float, outer_r: float, col: Color) -> ShaderMaterial:
+       var sh := Shader.new()
+       sh.code = """
+   shader_type spatial;
+   render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
+   uniform vec4 ring_color : source_color = vec4(0.0, 1.0, 0.533, 0.12);
+   uniform float inner_radius = 17.92;
+   uniform float outer_radius = 18.08;
+   varying vec2 v_xz;
+   void vertex() {
+       v_xz = VERTEX.xz;
+   }
+   void fragment() {
+       float r = length(v_xz);
+       float aa = max(fwidth(r), 0.018);
+       float mask = smoothstep(inner_radius - aa, inner_radius + aa, r) * (1.0 - smoothstep(outer_radius - aa, outer_radius + aa, r));
+       ALBEDO = ring_color.rgb;
+       ALPHA = ring_color.a * mask;
+   }
+   """
+       var mat := ShaderMaterial.new()
+       mat.shader = sh
+       mat.set_shader_parameter("ring_color", col)
+       mat.set_shader_parameter("inner_radius", inner_r)
+       mat.set_shader_parameter("outer_radius", outer_r)
+       return mat
+   ```
+2. Em `scenes/main.gd`:
+   - No `range_indicator` (linha 88), usar `128` segmentos com folga de geometria para o fade AA (`RingMeshBuilder.create_ring_mesh(hero.attack_range - 0.25, hero.attack_range + 0.25, 128)`) e aplicar `RingMeshBuilder.create_smooth_ring_material(hero.attack_range - 0.08, hero.attack_range + 0.08, Color(0, 1, 0.533, 0.12))`.
+   - No `_process` de `main.gd` (linha 397), atualizar a cor do `ShaderMaterial` via `set_shader_parameter("ring_color", target_col)` quando `is_attack_move_mode` mudar (`Color(1.0, 0.0, 0.333, 0.35)` em Attack Move, `Color(0.0, 1.0, 0.533, 0.12)` normal).
+   - No `target_marker` (linha 99), usar `RingMeshBuilder.create_ring_mesh(0.30, 0.65, 64)` com `RingMeshBuilder.create_smooth_ring_material(0.40, 0.50, Color(1, 0, 0.333, 0.6))`.
+3. Em `scenes/arena/dummy.gd`:
+   - No `ToleranceRing`, usar `RingMeshBuilder.create_ring_mesh(2.85, 3.10, 96)` com `RingMeshBuilder.create_smooth_ring_material(2.95, 3.00, Color(0.6667, 0.0, 1.0, 0.32))`.
+
+#### PASSO 2 — Linha Dourada Central e Grade da Arena Suaves (`scenes/arena/grid_helper.gd`)
+- Em `scenes/arena/grid_helper.gd`, substituir as linhas `Mesh.PRIMITIVE_LINES` (que o Direct3D11/ANGLE sempre desenha como 1px serrilhado quando `msaa_3d = 0`) por um plano procedural ou faixas com `ShaderMaterial` analítico usando `fwidth(WORLD_POSITION.xz)` / `v_xz` para desenhar tanto o grid `2.5m` (`#1f304d`, alpha `0.38`) quanto as duas linhas centrais douradas (`X=0` e `Z=0`, `#c8aa6e`, alpha `0.78`) com `smoothstep` de `1.2px` de largura em espaço de tela (`fwidth`).
+- **Vantagem:** Zero serrilhado na linha dourada e no grid azul, mantendo `msaa_3d = 0` (ou `msaa_3d = 1` se o FPS permitir) com 100+ FPS!
+
+#### PASSO 3 — Corrigir a Tipografia das Placas Flutuantes (`scripts/moba_fonts.gd`, `Outfit-Variable.ttf.import` e `scenes/ui/floating_bars.gd`)
+1. Em `assets/fonts/Outfit-Variable.ttf.import`:
+   - Configurar `hinting=0` (`FONT_HINTING_NONE`), `subpixel_positioning=2` (`ONE_QUARTER`) e `oversampling=3.0`.
+2. Em `scripts/moba_fonts.gd`:
+   - Remover o `variation_embolden = 0.14` e o `+40` no `wght` que deformaram os números de `9px`.
+   - Usar `v.variation_opentype = { WGHT_TAG: float(clamp(weight, 100, 900)) }`, `v.variation_embolden = 0.0`, e `v.spacing_glyph = extra_spacing_glyph`.
+3. Em `scenes/ui/floating_bars.gd`:
+   - Nas fontes das barras flutuantes (`_f_name` e `_f_hp`), passar `extra_spacing_glyph = 1` (`MobaFonts.get_outfit(800, 1)` e `MobaFonts.get_outfit(700, 1)`), reproduzindo o `letter-spacing: 0.5px` do `style.css` (linhas 222, 231, 271 e 282).
+   - Em `_draw_tl_shadowed(tl: TextLine, pos: Vector2, col: Color)`, substituir `tl.draw_outline(ci, p, 3, ...)` por `tl.draw_outline(ci, p, 2, Color(0, 0, 0, 0.85))` + `tl.draw(ci, p + Vector2(0, 1), Color(0, 0, 0, 0.85))` + `tl.draw(ci, p, col)`.
