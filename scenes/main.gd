@@ -76,6 +76,9 @@ const WEB_COMMANDS_JS: String = """
 var _web_command_poll_elapsed: float = 0.0
 
 var range_mat: Material
+# -1 forces the initial shader parameter update; subsequent writes only happen
+# when toggling attack-move mode, not on every render frame.
+var _last_range_color_mode: int = -1
 
 func _ready() -> void:
 	is_headless = DisplayServer.get_name() == "headless"
@@ -420,11 +423,14 @@ func _process(delta: float) -> void:
 	if range_indicator and hero:
 		range_indicator.global_position = hero.global_position + Vector3(0, 0.02, 0)
 		if range_mat:
-			var target_col := Color(1.0, 0.0, 0.33, 0.35) if is_attack_move_mode else Color(0.0, 1.0, 0.533, 0.12)
-			if range_mat is ShaderMaterial:
-				range_mat.set_shader_parameter("ring_color", target_col)
-			elif range_mat is StandardMaterial3D and range_mat.albedo_color != target_col:
-				range_mat.albedo_color = target_col
+			var color_mode := 1 if is_attack_move_mode else 0
+			if color_mode != _last_range_color_mode:
+				var target_col := Color(1.0, 0.0, 0.33, 0.35) if is_attack_move_mode else Color(0.0, 1.0, 0.533, 0.12)
+				if range_mat is ShaderMaterial:
+					range_mat.set_shader_parameter("ring_color", target_col)
+				elif range_mat is StandardMaterial3D and range_mat.albedo_color != target_col:
+					range_mat.albedo_color = target_col
+				_last_range_color_mode = color_mode
 
 	# 5. Update Target Marker on selected dummy
 	if target_marker:

@@ -1,29 +1,35 @@
-# game-x1 — Regras Operacionais do Agente (Branch: port/game-x0-1to1)
+# game-x1 — Regras operacionais de desenvolvimento
 
-Esta branch é dedicada à **migração 1:1 e reprodução fiel do jogo `game-x0-moba` (Three.js + TypeScript) para Godot 4 (GDScript + 3D)**.
-A fonte da verdade visual, de controles, enquadramento, combate e sensação de jogo é o `game-x0-moba`.
+**Branch oficial única: `main` | Projeto Godot 4 multiplataforma**
 
-## Princípios da Migração
-- **Fidelidade 1:1 Absoluta:** O objetivo é paridade direta com o `game-x0-moba`. Não desenvolvemos um jogo diferente nem uma interpretação genérica de League of Legends. Reproduzimos a versão já aprovada pelo proprietário.
-- **Revogação da política de bonecos-palito:** Na branch de migração, a regra anterior de "apenas bonecos-palito" está revogada. Utilizamos o modelo original da Caitlyn (`CaitlynComplete.glb`), dummies vermelhos, anéis de tolerância, projéteis Hextech e interface do `game-x0`.
-- **Preservação de timings e gameplay:** Respeitar a velocidade de movimento (16.0), ataque (1.85), windup (0.04s), anim (0.12s), bônus de cliques rápidos (kiting mecânico), projéteis homing (25.0) e coronhada melee ($\le 3.2\text{ m}$).
-- **Câmera fiel ao game-x0:** FOV 38°, offset (0, 56, 48), folga do cursor no modo travado (6.0 unidades, lerp 0.08), edge pan (18px, vel 40), arrasto com MMB e limites clamped em $\pm 38$.
-- **Sem overengineering:** Código modular, legível e direto em GDScript nativo, sem camadas desnecessárias de plugins ou frameworks complexos.
-- **Desenvolvimento em incrementos verificáveis:** Cada fase da migração deve ser testável, mantendo o projeto executável via CLI e no navegador.
+Este projeto migra fielmente o jogo existente [game-x0-moba](https://github.com/victorwilliames/game-x0-moba) (Three.js + TypeScript) para uma **única base Godot 4/GDScript**, exportável para Web, Windows, Linux, macOS e Android.
 
-## Engine e Workflow
-- Godot 4 estável, **GDScript**, 3D, câmera perspectiva com ângulo original do `game-x0`.
-- **CLI-first:** Criar/editar arquivos de texto (cenas `.tscn`, scripts `.gd`), testar via `scripts/test.ps1` e exportar via `scripts/export_web.ps1`.
-- **Web em Modo Janela como prioridade:** O jogo deve funcionar perfeitamente em abas comuns do Chrome sem exigir fullscreen ou pointer lock obrigatórios, com meta de 120 FPS em hardware de referência de 120 Hz.
-- Renderizador `Compatibility` (WebGL 2.0).
+## Regras de colaboração e Git
 
-## Validação e Qualidade
-- Executar `scripts/test.ps1` após alterações estruturais.
-- Validar a exportação Web e testar no navegador em [http://localhost:8080/](http://localhost:8080/).
-- Comparar lado a lado com a versão de referência em [http://localhost:3005/](http://localhost:3005/) ou no GitHub Pages.
-- Nunca marcar testes como passados sem execução real.
-- Commits organizados publicados exclusivamente na branch `port/game-x0-1to1`. Proibido merge para `main` sem autorização do proprietário.
+- Antes de cada turno: leia `HANDOFF.md`, `PROGRESS.md`, verifique o SHA de `origin/main`, `git status` e sincronize com `git pull --ff-only origin main`. Só a **`main`** recebe desenvolvimento; nunca criar branches separadas. Proibido force push, reset destrutivo e apagar dados não commitados.
+- **ChatGPT e Antigravity trabalham em turnos**, não simultaneamente nos mesmos arquivos. Cada turno termina com commit publicado, estado verificado, testes executados e limitações reais registradas. Não sobrescrever alterações de outro agente.
+- Godot é a fonte de gameplay e UI em todas as plataformas. Não introduzir HTML/CSS como HUD principal nem duplicar gameplay para Web. Perfis gráficos específicos de plataforma são válidos quando necessários.
+- Código tocado via GitHub **sem Godot local** pode ser inspecionado/verificado estaticamente, mas **não deve ser declarado compilado, exportado ou testado no Chrome/Windows** sem execução real. Informar validações pendentes claramente.
 
-## Continuidade da Sessão
-- **Sempre ler `HANDOFF.md` antes de retomar uma sessão**.
-- **Atualizar `HANDOFF.md` a cada marco significativo**, indicando branch, arquivos alterados, estado de verificação, testes executados e próximo passo.
+## Fidelidade e performance
+
+- O `game-x0-moba` é referência de controles, câmera, visuais, tipografia, ataques e animações. Preservar Caitlyn original, 2 dummies, anéis, sombras, grid, rifle, chapéu, HUD, fontes Outfit, combate e kiting; não substituir elementos visuais por proxies piores para obter FPS.
+- Movimento: 16 m/s, alcance 18 m, AS base 1,85, câmera FOV 38°, offset (0,56,48), controles Y/Espaço/MMB, limites ±38 m. Use dados do jogo original para demais timings.
+- **Meta de engenharia: 300 FPS (~3,33 ms/frame) com imagem completa, inclusive antialiasing.** Resultados `no_fxaa` são diagnósticos, não cumprimento da meta visual. FPS bruto não equivale a quadros visíveis em uma tela de 60 Hz; não prometer 300 em hardware arbitrário.
+- Medir `full`, tempo CPU/GPU quando disponível, intervalos p50/p95/p99, cenário e resolução; repetir benchmarks e evitar confundir `requestAnimationFrame` com FPS da GPU.
+- Atenção especial à legibilidade dos textos pequenos do HUD. Não resolver serrilhado borrando a UI com pós-processamento; testar renderização da fonte em 100%, escalas DPI e tamanho real.
+- Web Godot 4 requer Compatibility/WebGL2; renderizadores nativos podem ter perfis próprios, mas manter o projeto único.
+
+## Qualidade e testes
+
+```powershell
+git pull --ff-only origin main
+powershell -ExecutionPolicy Bypass -File scripts/test.ps1
+powershell -ExecutionPolicy Bypass -File scripts/export_web.ps1
+powershell -ExecutionPolicy Bypass -File scripts/run_perf_bench.ps1 -Configs "full,no_fxaa" -Runs 3 -Sec 12 -Warmup 6
+```
+
+- Export Web no Chrome: `http://localhost:8080/` após `scripts/serve_web.ps1`; referência Three.js: `http://localhost:3005/`.
+- `scripts/perf_bench.gd` possui modos `pass_only`, `crop_draw`, `crop_copy` **experimentais**. Eles não substituem o `full` de produção nem demonstram qualidade visual equivalente. `BackBufferCopy` e região parcial exigem validação nativa e Web antes de recomendar uso de produção.
+- A física `Dummy` não realiza colisões completas: antes de obstáculos físicos, revisar a configuração e os testes.
+- Após cada alteração que toque gameplay, testar as cinco suítes. Não marcar como passou sem executá-las. Fazer comparativo visual com screenshots e medições antes/depois quando houver impacto gráfico.

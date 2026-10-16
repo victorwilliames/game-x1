@@ -1,36 +1,40 @@
-# game-x1
+# game-x1 — MOBA 3D com Godot 4
 
-MOBA 3D isométrico original desenvolvido com **Godot 4 + GDScript**, com **Antigravity/Gemini** como programador principal e ChatGPT no apoio técnico, planejamento, revisão e integração com o GitHub.
+Projeto **Godot 4 + GDScript** de base única, reproduzindo o [game-x0-moba](https://github.com/victorwilliames/game-x0-moba) em Three.js com fidelidade de jogabilidade e visual.
 
-## Objetivo
+**Branch de desenvolvimento única:** `main`. ChatGPT e Antigravity contribuem em turnos alternados.
 
-Criar **um protótipo 1v1 realmente jogável e divertido**, mesmo com arte inicial geométrica: câmera inclinada, herói animado, movimento, esquiva, ataque básico, habilidades Q/W/E/R, minions, torres, bases e condição de vitória.
+## Estado atual
 
-**Prioridade de teste:** Web. Plataformas-alvo adicionais: Windows e Android. Primeiro jogar contra bot; depois implementar 1v1 online com servidor autoritativo.
+- Cena 3D com Caitlyn animada, dois dummies (estático e móvel), arena escura com grid dourado, câmera isométrica e sombras.
+- Movimentação por clique, seleção e combate ranged/melee, projéteis, kiting, barras, números de dano, HUD nativo e cursores.
+- Export Web `Compatibility` (WebGL2) e testes/benchmarks Windows nativo e Chrome.
+- Destinos do mesmo projeto: **Windows, Linux, macOS, Android e Web**. Nem todas as plataformas já possuem resultados de build/teste.
+- **Meta de performance: 300 FPS bruto com qualidade visual completa** em hardware de referência; ainda NÃO demonstrada consistentemente com FXAA ativo e em Chrome. Consulte `docs/migration/visual/` e `HANDOFF.md` para os resultados medidos.
 
-**Visual de desenvolvimento:** não focar em gráficos finais. Heróis podem ser bonecos-palito 3D articulados, com chão quadriculado e elementos geométricos de debug. O objetivo é construir e testar mecânicas, animações, combate, IA e multiplayer. Consulte [ART_DIRECTION.md](ART_DIRECTION.md).
+## Comandos de desenvolvimento (Windows)
 
-## Situação
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/test.ps1
+powershell -ExecutionPolicy Bypass -File scripts/export_web.ps1
+powershell -ExecutionPolicy Bypass -File scripts/serve_web.ps1
+```
 
-**Etapa 0 implementada (fundação e prova Web).** Projeto Godot 4 criado com renderizador Compatibility, cena 3D de desenvolvimento (chão, iluminação com sombras, marcador central e câmera inclinada), exportação Web funcional e scripts de automação CLI (`run.ps1`, `test.ps1`, `export_web.ps1`, `serve_web.ps1`). Pendente de validação visual humana no navegador antes da Etapa 1.
+Janela Web local: `http://localhost:8080/`. O servidor deve permanecer aberto enquanto os testes Chrome rodam.
 
-## Documentos
+Benchmark nativo:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run_perf_bench.ps1 -Configs "full,pass_only,no_fxaa" -Runs 3 -Sec 12 -Warmup 6
+```
 
-- [AGENTS.md](AGENTS.md): regras operacionais mínimas para agentes.
-- [GDD.md](GDD.md): escopo, mecânicas e condições de aceite do protótipo.
-- [ART_DIRECTION.md](ART_DIRECTION.md): regras de aparência, animação e efeitos iniciais.
-- [PROGRESS.md](PROGRESS.md): estado verificável e próximo incremento.
-- [HANDOFF.md](HANDOFF.md): memória de execução compartilhada, pendências, testes e ponto exato de retomada.
+Experimentos `crop_draw` e `crop_copy` em `scripts/perf_bench.gd` são somente diagnósticos e não preservam a suavização de toda a cena.
 
-## Como vamos trabalhar
+## Documentação
+- [AGENTS.md](AGENTS.md): regras atualizadas de Git, qualidade e validação.
+- [HANDOFF.md](HANDOFF.md): estado recente, testes e próximos passos.
+- [PROGRESS.md](PROGRESS.md): histórico de implementação (algumas seções descrevem abordagens anteriores).
+- [GDD.md](GDD.md): escopo de gameplay.
+- [ART_DIRECTION.md](ART_DIRECTION.md): identidade e comparativos.
+- [docs/migration/](docs/migration/): engenharia reversa e benchmarking.
 
-1. Direção do produto decide a experiência desejada e aprova resultados.
-2. Antigravity implementa localmente usando Godot CLI, testa e sincroniza o código com este repositório.
-3. ChatGPT faz revisão técnica do GitHub, ajuda a escrever e ajustar planos/artefatos, propõe melhorias e pode contribuir diretamente com commits ou PRs quando necessário.
-4. Cada entrega deve deixar o jogo executável, indicar o que foi **testado de verdade** e registrar pendências.
-
-Não instalar ferramentas extras (MCP, Blender, geração 3D paga) sem uma necessidade demonstrada.
-
-## Referências
-
-LoL e Dota são referências de **gênero e legibilidade**, não fonte de personagens, marcas, mapas ou assets para copiar. A propriedade visual e os sistemas deverão ser originais.
+**Política:** não reportar ganhos nem testes como comprovados sem executar a compilação e os benchmarks adequados.

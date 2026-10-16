@@ -1,5 +1,7 @@
 # Progresso — game-x1 (Port 1:1 game-x0-moba -> Godot 4)
 
+> **Estado atualizado (2026-10-16):** branch `main` oficial única; o texto abaixo preserva o histórico e pode mencionar configurações anteriores (MSAA, branch de migração etc.). Verifique sempre o commit HEAD, `HANDOFF.md` e os arquivos reais. Meta atual: 300 FPS com FXAA e visual completo, ainda não comprovada para todos os cenários ou plataformas.
+
 **Atualizado:** 2026-10-16  
 **Branch:** `main` (Branch de trabalho oficial única)  
 **Meta de Engenharia:** 300 FPS (3,33 ms de frame budget) com fidelidade visual 1:1 absoluta e suporte multiplataforma (Windows, Linux, macOS, Android e Web).  

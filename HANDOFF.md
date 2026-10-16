@@ -188,3 +188,14 @@ Para atingir 300 FPS (3.33 ms) com antialiasing ativo, a estratégia ideal **nã
 - **Testar obrigatoriamente**: parser Godot e export Web; screenshot dos modos crop, correção de ordenação do BackBufferCopy antes do shader, ausência de pixels indefinidos/borrão/retângulos inesperados, restauração do layout fullscreen ao finalizar, estados dos atalhos F1/F2/F4, e testes gameplay 5/5. Se a modalidade `crop_copy` funcionar incorretamente no Compatibility, reportar e consertar antes de alegar resultados.
 - **Nada de alterar o shader principal, resolução, Caitlyn ou UI por este experimento.** Sem medição local nesta sessão; não declarar aumento de FPS nem 300 FPS atingidos.
 - **Nota técnica:** reduzir o quad sem `BackBufferCopy` não garante cópia parcial. Fazer bounding apenas dos personagens deixa grid, sombras, anéis e linhas fora da suavização. Além disso, o benchmark de 12s anterior registrou `no_fxaa` agregado em aproximadamente 236,9 FPS no Windows e 115,1 FPS no Chrome: os 300 FPS não são sustentados nesse conjunto de medições.
+
+
+---
+
+## Turno ChatGPT — pequeno ajuste do hot path, atualização de orientação de agentes
+
+- **Base:** `34c6ac3`, branch única `main`.
+- `scenes/main.gd`: o uniform `ring_color` do indicador de alcance deixou de ser enviado a cada quadro; muda na primeira atualização e quando o modo Attack Move alterna. Posição, geometria, cores e gameplay mantidos.
+- `AGENTS.md` e `README.md`: eliminadas instruções obsoletas para publicar na antiga branch e descrição de bonecos-palito. `PROGRESS.md`: aviso sobre conteúdo histórico para evitar decisões equivocadas.
+- **Teste local pendente:** Godot/Chrome não estão instalados/acessíveis neste ambiente. Validar as 5 suítes, o indicador verde/rosa com tecla A, export Web e captura visual.
+- **Pendência visual reportada pelo usuário:** textos de 9px acima dos personagens e dummies ainda aparentam serrilhado. Revisar antialiasing/hinting da fonte Outfit, projeção arredondada e densidade de pixels antes de alterar os tamanhos aprovados; NÃO aplicar blur do FXAA sobre HUD.
