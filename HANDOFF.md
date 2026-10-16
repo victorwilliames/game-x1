@@ -171,3 +171,20 @@ Para atingir 300 FPS (3.33 ms) com antialiasing ativo, a estratégia ideal **nã
 - **Opção 2 (Sub-Viewport Resolvido):** Avaliar se no Godot 4 um Viewport isolado permite blit direto sem a passagem intermediária de `hint_screen_texture`.
 - **Opção 3 (Hardware MSAA em Plataformas com Suporte Nativo Eficiente):** No Windows nativo com drivers dedicados, o MSAA de hardware dispensa completamente cópias de tela via `screen_texture`.
 
+
+---
+
+## ChatGPT — benchmark incremental BackBufferCopy regional (POC, NÃO é implementação de produção)
+
+**Base:** commit `18d46a2`, branch única `main`. `scripts/perf_bench.gd` recebeu duas configurações EXCLUSIVAMENTE de diagnóstico:
+
+- `crop_draw`: a cópia automática de tela permanece completa (`hint_screen_texture`), mas o ColorRect passthrough só ocupa um retângulo central de 50% da largura × 50% da altura. Isola aproximadamente o efeito de reduzir a rasterização/composição do quad.
+- `crop_copy`: mantém o mesmo quad parcial, mas cria um `BackBufferCopy` anterior ao quad, em `COPY_MODE_RECT`, com região central + 16px de margem, impedindo a cópia automática de tela inteira conforme a documentação de screen-reading da Godot. Isola aproximadamente o efeito da cópia parcial, comparando com `crop_draw`.
+- `pass_only` e `no_fxaa` permanecem inalterados como controles. `full` conserva shader FXAA de produção. Os modos `crop_*` são **sem AA e NÃO visualmente equivalentes ao jogo completo**; eles não são recomendação de bounding-box para produção. A configuração `full` é restaurada em `_finish()`.
+- **Executar** no Windows:
+  `powershell -ExecutionPolicy Bypass -File scripts/run_perf_bench.ps1 -Configs "pass_only,crop_draw,crop_copy,no_fxaa,full" -Runs 3 -Sec 12 -Warmup 6 -OutFile "docs/migration/visual/regional_copy_native.json"`
+- **Chrome Web**: `?bench=1&runs=3&sec=12&warmup=6&configs=pass_only,crop_draw,crop_copy,no_fxaa,full`; extrair `window._gamex1_bench_result` e registrar `regional_copy_web.json`.
+- **A interpretação precisa separar** `pass_only - crop_draw` (aprox. impacto do draw parcial mantendo cópia full) e `crop_draw - crop_copy` (aprox. impacto da cópia parcial mantendo desenho parcial); não inferir que o efeito é perfeitamente aditivo nem que um ganho provaria paridade visual. A medida de GPU do Chrome permanece indisponível quando o harness registra -1.
+- **Testar obrigatoriamente**: parser Godot e export Web; screenshot dos modos crop, correção de ordenação do BackBufferCopy antes do shader, ausência de pixels indefinidos/borrão/retângulos inesperados, restauração do layout fullscreen ao finalizar, estados dos atalhos F1/F2/F4, e testes gameplay 5/5. Se a modalidade `crop_copy` funcionar incorretamente no Compatibility, reportar e consertar antes de alegar resultados.
+- **Nada de alterar o shader principal, resolução, Caitlyn ou UI por este experimento.** Sem medição local nesta sessão; não declarar aumento de FPS nem 300 FPS atingidos.
+- **Nota técnica:** reduzir o quad sem `BackBufferCopy` não garante cópia parcial. Fazer bounding apenas dos personagens deixa grid, sombras, anéis e linhas fora da suavização. Além disso, o benchmark de 12s anterior registrou `no_fxaa` agregado em aproximadamente 236,9 FPS no Windows e 115,1 FPS no Chrome: os 300 FPS não são sustentados nesse conjunto de medições.

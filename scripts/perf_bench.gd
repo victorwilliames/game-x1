@@ -16,12 +16,15 @@ extends Node
 ##          -> result JSON string is published in window._gamex1_bench_result
 ##
 ## FXAA decomposition (available natively and on Web):
-##   --bench-configs=full,pass_only,no_fxaa
+##   --bench-configs=full,pass_only,crop_draw,crop_copy,no_fxaa
 ##   full:       screen copy/compositing AND full FXAA filter (production)
-##   pass_only:  same full-screen screen-texture copy/compositing, no filtering
-##   no_fxaa:    postprocess layer hidden entirely
-##   Differences indicate incremental costs under matched conditions;
-##   they are not precise isolated GPU pass timings.
+##   pass_only:  fullscreen auto-copy + fullscreen passthrough shader
+##   crop_draw:  fullscreen auto-copy + cropped central 50%x50% passthrough
+##   crop_copy:  explicit BackBufferCopy COPY_MODE_RECT + cropped passthrough
+##   no_fxaa:    no post-processing layer (no copy, no quad)
+##   crop_* are diagnostic ONLY: center 25% viewport area with NO AA.
+##   They cannot establish full-scene visual parity. Differences approximate
+##   costs under matched conditions; not precise isolated GPU timings.
 ##
 ## Configs are INTERLEAVED per round (A,B,C,A,B,C,...) so thermal / turbo drift on laptops
 ## affects every config equally instead of biasing whichever ran last.
@@ -45,6 +48,49 @@ var _info: Dictionary = {}
 # antialiasing filter. Combined with full and no_fxaa it isolates pass overhead.
 var _baseline_fxaa_material: Material = null
 var _passthrough_material: ShaderMaterial = null
+var _benchmark_region_copy: BackBufferCopy = null
+
+# Fixed central region simplifies the experiment: half viewport width and
+# half viewport height (25% pixels). This is deliberately NOT a character
+# tracker, NOT production AA, and NOT intended to preserve every 3D edge.
+const BENCH_CROP_MARGIN_PIXELS := 16.0
+
+func _benchmark_crop_rect() -> Rect2:
+	var vp_size := get_viewport().get_visible_rect().size
+	return Rect2((vp_size * 0.25).round(), (vp_size * 0.5).round())
+
+func _configure_benchmark_copy(fxaa_rect: ColorRect, cfg: String, roi: Rect2) -> void:
+	if cfg == "crop_copy" and _benchmark_region_copy == null:
+		_benchmark_region_copy = BackBufferCopy.new()
+		_benchmark_region_copy.name = "BenchRegionBackBufferCopy"
+		_benchmark_region_copy.copy_mode = BackBufferCopy.COPY_MODE_DISABLED
+		var parent_node := fxaa_rect.get_parent()
+		parent_node.add_child(_benchmark_region_copy)
+		parent_node.move_child(_benchmark_region_copy, fxaa_rect.get_index())
+
+	if _benchmark_region_copy:
+		if cfg == "crop_copy":
+			# Important: explicitly copy only the diagnostic region, preventing the
+			# automatic fullscreen back-buffer copy from hint_screen_texture.
+			var viewport_rect := get_viewport().get_visible_rect()
+			_benchmark_region_copy.rect = roi.grow(BENCH_CROP_MARGIN_PIXELS).intersection(viewport_rect)
+			_benchmark_region_copy.copy_mode = BackBufferCopy.COPY_MODE_RECT
+		else:
+			# A disabled BackBufferCopy does NOT suppress the usual auto full
+			# screen capture for pass_only/crop_draw/full.
+			_benchmark_region_copy.copy_mode = BackBufferCopy.COPY_MODE_DISABLED
+
+	# Reset to exact scene-authored fullscreen layout when not testing a crop.
+	# These changes occur only in benchmark mode (_run), never in normal play.
+	var crop := (cfg == "crop_draw" or cfg == "crop_copy")
+	fxaa_rect.anchor_left = 0.0
+	fxaa_rect.anchor_top = 0.0
+	fxaa_rect.anchor_right = 0.0 if crop else 1.0
+	fxaa_rect.anchor_bottom = 0.0 if crop else 1.0
+	fxaa_rect.offset_left = roi.position.x if crop else 0.0
+	fxaa_rect.offset_top = roi.position.y if crop else 0.0
+	fxaa_rect.offset_right = roi.end.x if crop else 0.0
+	fxaa_rect.offset_bottom = roi.end.y if crop else 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -165,19 +211,21 @@ func _apply_config(cfg: String) -> void:
 			fxaa = false
 			shadows = false
 			ui_on = false
-	# Swap materials only during benchmark configuration transitions.
-	# "pass_only" copies the 3D screen texture but performs no FXAA filtering.
-	# For all other configurations restore the ORIGINAL shader/material exactly.
+	# Diagnostic configurations retain the original scene and UI while
+	# independently testing fullscreen copy, reduced raster, and regional copy.
+	# Normal game mode never invokes this method.
 	if fxaa_rect:
 		if _baseline_fxaa_material == null:
 			_baseline_fxaa_material = fxaa_rect.material
-		if cfg == "pass_only":
+		var passthrough := cfg == "pass_only" or cfg == "crop_draw" or cfg == "crop_copy"
+		if passthrough:
 			if _passthrough_material == null:
 				_passthrough_material = ShaderMaterial.new()
 				_passthrough_material.shader = load("res://shaders/screen_passthrough.gdshader") as Shader
 			fxaa_rect.material = _passthrough_material
 		else:
 			fxaa_rect.material = _baseline_fxaa_material
+		_configure_benchmark_copy(fxaa_rect, cfg, _benchmark_crop_rect())
 
 	if pp:
 		pp.visible = fxaa
@@ -334,6 +382,8 @@ func _summarize(frames: PackedFloat32Array, proc: PackedFloat32Array, phys: Pack
 	}
 
 func _finish() -> void:
+	# Always restore production graphics after diagnostic runs, including Web.
+	_apply_config("full")
 	var out := {"info": _info, "results": _results}
 	var s := JSON.stringify(out, "  ")
 	if OS.has_feature("web"):
