@@ -45,11 +45,11 @@ func _draw() -> void:
 	# Gold border
 	draw_arc(center, radius, 0.0, TAU, 48, COLOR_GOLD_BORDER, 1.5, true)
 
-	# Hextech fullscreen icon (4 outward-facing corners)
+	# Hextech fullscreen icon (4 outward-facing corners matching 20x20 SVG viewBox 0 0 24 24)
 	var icon_color := COLOR_GOLD
-	var line_w := 2.0
-	var offset := 7.0
-	var arm := 5.0
+	var line_w := 1.65
+	var offset := 7.5
+	var arm := 4.2
 
 	var x_l := center.x - offset
 	var x_r := center.x + offset

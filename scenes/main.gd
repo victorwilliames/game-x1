@@ -103,6 +103,7 @@ func _ready() -> void:
 		green_mat.albedo_color = Color(0.0, 1.0, 0.533, 0.85) # #00ff88
 		for mesh_inst in click_indicator.find_children("*", "MeshInstance3D"):
 			mesh_inst.material_override = green_mat
+			mesh_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		click_indicator.visible = false
 
 	# Setup Target Marker (Flat 2D red ring matching THREE.RingGeometry(0.75, 0.95, 32))
@@ -291,23 +292,10 @@ func _handle_attack_basic_trigger() -> void:
 func _get_floor_world_pos(screen_pos: Vector2) -> Variant:
 	if not camera_controller or not camera_controller.camera:
 		return null
-	var active_cam = camera_controller.camera
-
-	var ray_origin = active_cam.project_ray_origin(screen_pos)
-	var ray_dir = active_cam.project_ray_normal(screen_pos)
-
-	var space_state = get_world_3d().direct_space_state
-	var query = PhysicsRayQueryParameters3D.create(ray_origin, ray_origin + ray_dir * 300.0)
-	query.collision_mask = 1
-	var result = space_state.intersect_ray(query)
-
-	if not result.is_empty():
-		return result.position
-
-	var plane_hit = ground_plane.intersects_ray(ray_origin, ray_dir)
-	if plane_hit != null:
-		return plane_hit
-	return null
+	var active_cam := camera_controller.camera
+	var ray_origin := active_cam.project_ray_origin(screen_pos)
+	var ray_dir := active_cam.project_ray_normal(screen_pos)
+	return ground_plane.intersects_ray(ray_origin, ray_dir)
 
 func _clamp_to_bounds(pos: Vector3) -> Vector3:
 	return Vector3(
@@ -407,10 +395,9 @@ func _process(delta: float) -> void:
 	if range_indicator and hero:
 		range_indicator.global_position = hero.global_position + Vector3(0, 0.02, 0)
 		if range_mat:
-			if is_attack_move_mode:
-				range_mat.albedo_color = Color(1.0, 0.0, 0.33, 0.35) # #ff0055
-			else:
-				range_mat.albedo_color = Color(0.0, 1.0, 0.533, 0.12) # #00ff88
+			var target_col := Color(1.0, 0.0, 0.33, 0.35) if is_attack_move_mode else Color(0.0, 1.0, 0.533, 0.12)
+			if range_mat.albedo_color != target_col:
+				range_mat.albedo_color = target_col
 
 	# 5. Update Target Marker on selected dummy
 	if target_marker:
@@ -420,7 +407,8 @@ func _process(delta: float) -> void:
 			var s := 1.0 + sin(Time.get_ticks_msec() * 0.01) * 0.1
 			target_marker.scale = Vector3(s, s, s)
 		else:
-			target_marker.visible = false
+			if target_marker.visible:
+				target_marker.visible = false
 
 	# 6. Update Click Indicator (Spins and scales down)
 	if click_indicator and click_indicator.visible:
@@ -443,24 +431,20 @@ func _update_hover_and_cursor() -> void:
 	var mouse_pos = get_viewport().get_mouse_position()
 	var cursor_world = _get_floor_world_pos(mouse_pos)
 
-	for d in dummies:
-		if d and is_instance_valid(d):
-			d.set_outline_visible(false)
-
 	var hover_enemy = false
 
-	if cursor_world is Vector3:
-		for d in dummies:
-			if d and is_instance_valid(d) and d.active:
+	for d in dummies:
+		if d and is_instance_valid(d):
+			var show_outline := false
+			if d.active and cursor_world is Vector3:
 				if selected_target == d:
-					d.set_outline_visible(true)
-
+					show_outline = true
 				var dx: float = d.global_position.x - cursor_world.x
 				var dz: float = d.global_position.z - cursor_world.z
-				var dist_sq: float = dx * dx + dz * dz
-				if dist_sq <= 3.0 * 3.0: # Purple ring radius tolerance
+				if dx * dx + dz * dz <= 3.0 * 3.0: # Purple ring radius tolerance
 					hover_enemy = true
-					d.set_outline_visible(true)
+					show_outline = true
+			d.set_outline_visible(show_outline)
 
 	if hover_enemy:
 		_set_cursor("alt")
@@ -487,7 +471,7 @@ func _update_telemetry(delta: float) -> void:
 	frame_time_acc += delta
 	frame_time_count += 1
 	var now = Time.get_ticks_msec() / 1000.0
-	if now - last_fps_update_time >= 0.2:
+	if now - last_fps_update_time >= 0.5:
 		if frame_time_count > 0:
 			current_frame_time_ms = (frame_time_acc / float(frame_time_count)) * 1000.0
 		frame_time_acc = 0.0
@@ -495,10 +479,9 @@ func _update_telemetry(delta: float) -> void:
 		last_fps_update_time = now
 
 		if OS.has_feature("web"):
-			var raf_val = JavaScriptBridge.eval("window._gamex1_raf ? window._gamex1_raf.fps : 0")
+			var raf_val = JavaScriptBridge.eval("window._gamex1_engine_fps = %d; window._gamex1_frame_time_ms = %.2f; window._gamex1_raf ? window._gamex1_raf.fps : 0;" % [Engine.get_frames_per_second(), current_frame_time_ms])
 			if raf_val != null:
 				cached_raf_hz = int(raf_val)
-			JavaScriptBridge.eval("window._gamex1_engine_fps = %d; window._gamex1_frame_time_ms = %.2f;" % [Engine.get_frames_per_second(), current_frame_time_ms])
 
 		_update_hud()
 

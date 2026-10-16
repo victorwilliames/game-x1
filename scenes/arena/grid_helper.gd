@@ -15,17 +15,18 @@ class_name MobaGridHelper
 		divisions = val
 		_rebuild_grid()
 
-@export var color_center: Color = Color(0.95, 0.78, 0.43, 1.0): # #c29d53 unshaded calibrated
+@export var color_center: Color = Color(0.7608, 0.6157, 0.3255, 1.0): # #c29d53 [194, 157, 83]
 	set(val):
 		color_center = val
 		_rebuild_grid()
 
-@export var color_grid: Color = Color(0.075, 0.125, 0.175, 1.0): # #162838 unshaded calibrated
+@export var color_grid: Color = Color(0.0863, 0.1569, 0.2196, 1.0): # #162838 [22, 40, 56]
 	set(val):
 		color_grid = val
 		_rebuild_grid()
 
 func _ready() -> void:
+	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_rebuild_grid()
 
 func _rebuild_grid() -> void:

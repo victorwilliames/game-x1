@@ -58,10 +58,11 @@ transform = Transform3D(0.707107, -0.57735, 0.408248, 0, 0.57735, 0.816497, -0.7
 light_color = Color(1, 1, 1, 1)
 light_energy = 2.0
 shadow_enabled = true
-shadow_bias = 0.02
-shadow_normal_bias = 1.0
+shadow_bias = 0.01
+shadow_normal_bias = 0.8
 directional_shadow_mode = 0
-directional_shadow_max_distance = 55.0
+directional_shadow_fade_start = 0.95
+directional_shadow_max_distance = 115.0
 
 [node name="Arena" type="Node3D" parent="."]
 
@@ -70,6 +71,7 @@ collision_layer = 1
 collision_mask = 2
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Arena/Ground"]
+cast_shadow = 0
 mesh = SubResource("PlaneMesh_ground")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Arena/Ground"]
@@ -78,6 +80,7 @@ shape = SubResource("BoxShape3D_ground")
 
 [node name="GridHelper" type="MeshInstance3D" parent="Arena"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+cast_shadow = 0
 script = ExtResource("2_grid_helper")
 
 [node name="Dummies" type="Node3D" parent="."]
@@ -107,12 +110,14 @@ fov = 38.0
 
 [node name="RangeIndicator" type="MeshInstance3D" parent="Effects"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+cast_shadow = 0
 
 [node name="TargetMarker" type="Node3D" parent="Effects"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
 visible = false
 
 [node name="MarkerMesh" type="MeshInstance3D" parent="Effects/TargetMarker"]
+cast_shadow = 0
 
 [node name="ClickIndicator" parent="Effects" instance=ExtResource("5_point_target")]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0.05, 0)

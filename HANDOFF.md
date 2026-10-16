@@ -1,13 +1,12 @@
-# HANDOFF — memória operacional do game-x1
+# HANDOFF — Memória Operacional do game-x1
 
 **Atualizado por:** Antigravity (programador principal) em 2026-10-16  
-**Situação:** Migração integral 1:1 de `game-x0-moba` para Godot 4 — **Refinamento Tipográfico e Calibragem Visual 1:1**.
-- Criada a classe `MobaFonts` (`scripts/moba_fonts.gd`) aproveitando nativamente o eixo OpenType `wght` da fonte variável `Outfit-Variable.ttf` (pesos 500 Medium, 700 Bold, 800 ExtraBold e 900 Black) sem artefatos de `variation_embolden`.
-- Corrigidas as alturas de projeção das placas flutuantes para bater 1:1 com o Three.js original: Caitlyn em $y + 5.2$ (antes $6.1$) e Dummies em $y + 3.4$ (antes $3.8$).
-- Substituído o contorno invasivo das fontes pequenas por sombra projetada (`text-shadow: 1px 1px 1px #000`), eliminando o preenchimento de letras vazadas ('e', 'a', 'o', '0').
-- StatusHUD atualizado com `MobaFonts.outfit_medium()`, `MobaFonts.outfit_bold()` e sombras de texto de alto contraste.
-- Grade da arena recalibrada: linha central dourada intensificada para alcançar `[151, 124, 69]` e linhas secundárias atenuadas para `[22, 34, 44]`.
-- 5/5 suítes de teste passando com 0 erros (`scripts/test.ps1`), exportação Web atualizada (`scripts/export_web.ps1`).  
+**Situação:** Migração integral 1:1 de `game-x0-moba` para Godot 4 — **Ciclos 1 a 5 Concluídos (Tipografia, Placas Flutuantes 1:1, `#status-hud` Pixel-Exact, Geometria/Sombras 3D e Benchmarks Multi-Cenário Web)**.
+- **Ciclo 1 (Tipografia):** Eixo OpenType `wght` nativo em `Outfit-Variable.ttf` (`500`, `700`, `800`, `900`) + `hinting=1` (`FONT_HINTING_LIGHT`) + `subpixel_positioning=1` (`AUTO`), além de `MobaFonts.monospace_bold()` (`Consolas`/`Courier New` 700) para os `span` de Status e FPS no HUD, sem outline artificial no card.
+- **Ciclo 2 (Placas Flutuantes):** Reconstrução completa de `scenes/ui/floating_bars.gd` com cache de `TextLine` (HarfBuzz pré-moldado), sombra CSS de 4 cantos + drop-shadow desenhada **atrás** dos glifos, container preto `.lol-player-plate` (`105x17 px`, Level 5 `15x15`, barras `84px` com ticks de `100 HP`) na Caitlyn (`y+5.2`) e hierarquia 1:1 restaurada nos Dummies (`y+3.4`: barra vermelha `110x9` no **topo** em `y-36`, Nome no meio em `y-25`, HP embaixo em `y-13`, zero colisão).
+- **Ciclo 3 (`#status-hud` e Botão Fullscreen):** Card calibrado com bounding box exata `305x241 px` (`x=[20, 324], y=[20, 260]`), ícones reais `icon_mouse.png` (`10x15`) e `icon_keyboard.png` (`14x11`) extraídos 1:1 com filtro `NEAREST`, e geometria SVG 1:1 em `fullscreen_button.gd`.
+- **Ciclo 4 (Cena 3D, Dummies, Sombras e Grid):** Corrigida a altura das cápsulas dos Dummies em `dummy.tscn` (`height = 2.9` para `CapsuleGeometry(0.7, 1.5)` e `3.35` no outline), anel roxo plano contínuo via `RingMeshBuilder.create_ring_mesh(2.92, 3.0, 64)`, e restaurada a projeção de sombras direcionais (`directional_shadow_max_distance = 115.0`, `fade_start = 0.95`, PCF5 16-bit, cobrindo a distância câmera-origem de $73.75\text{m}$).
+- **Ciclo 5 (Otimização Web & Benchmarks Multi-Cenário):** Eliminado `queue_redraw()` ocioso, *shaping* HarfBuzz por frame (`TextLine` cache), raycast físico por frame (`Plane.intersects_ray` analítico) e `JavaScriptBridge.eval` por frame; executada bateria multi-cenário (`tools/run_benchmarks.cjs`) e gerados todos os compósitos de evidência em `docs/migration/visual/`.  
 **Branch:** `port/game-x0-1to1`
 
 ## 1. Links do Projeto e Referências
@@ -21,33 +20,28 @@
   - **Diretório local:** `C:\.PROJETOS - Sites 2026\godot\game-x0-moba\jogo`
   - **Servidor Dev Local (Three.js):** [http://localhost:3005/](http://localhost:3005/)
 
-## 2. O que o jogador e o avaliador podem verificar agora
+## 2. Arquivos Alterados / Criados Neste Marco
 
-1. **Paridade Visual e de Imagem 1:1:**
-   - **Tipografia Nítida e Variável:** Textos do StatusHUD e das barras flutuantes usando pesos nativos do Outfit (500/700/800/900) com sombra projetada preta `(1, 1)`, perfeitamente legíveis sem deformações.
-   - **Placas Flutuantes Posicionadas 1:1:** Barra da Caitlyn ancorada a $y+5.2$ sobre o chapéu e barras dos Dummies ancoradas a $y+3.4$.
-   - **Grid Calibrado:** Linhas secundárias sutis que não dominam a visão e linha central dourada nítida.
-   - **Antialiasing de Hardware (MSAA 2x):** Bordas do modelo 3D da Caitlyn, rifle e Dummies suaves e definidas.
-   - **Sombras PCF Acopladas:** Sombra direcional nítida e suave projetada sob os pés da Caitlyn sem descolamento (bias 0.02, normal_bias 1.0, alcance 55m).
-2. **Jogabilidade e Combate 1:1 LoL:**
-   - Caitlyn oficial 3D (`CaitlynComplete.glb`, 16.0 m/s, HP 1072, alcance 18m).
-   - Ataque básico com windup 0.04s e animação acelerada a 3.5x.
-   - Projéteis rosas Hextech a 25.0 m/s (55 dano / 96 crítico).
-   - Coronhada melee instantânea a $\le 3.2$ m com faísca amarela.
-   - Kiting com bônus de cliques rápidos (+15% a cada stack até +45%).
-   - Câmera LoL: FOV 38°, offset (0, 56, 48), folga do cursor no modo travado, edge pan, arrasto MMB e limites $\pm 38$.
+- `assets/fonts/Outfit-Variable.ttf.import`
+- `assets/ui/icons/icon_mouse.png`, `assets/ui/icons/icon_keyboard.png`
+- `scripts/moba_fonts.gd`
+- `scenes/ui/floating_bars.gd`
+- `scenes/ui/floating_damage.gd`
+- `scenes/ui/status_hud.gd`, `scenes/ui/status_hud.tscn`
+- `scenes/ui/fullscreen_button.gd`
+- `scenes/arena/dummy.gd`, `scenes/arena/dummy.tscn`
+- `scenes/arena/grid_helper.gd`
+- `scenes/main.gd`, `scenes/main.tscn`, `project.godot`
+- `tools/generate_visual_evidence.py`, `tools/run_benchmarks.cjs`, `tools/capture_combat.cjs`
+- `docs/migration/ART_DIRECTION.md`, `docs/migration/PARITY_MATRIX.md`, `docs/migration/visual/*`
 
-## 3. Estado das validações
+## 3. Estado das Validações
 
-- **verified:** Suíte quíntupla (`scripts/test.ps1`) com 100% de sucesso (código de saída 0):
-  - 1/5: Import & parse do editor headless.
-  - 2/5: Smoke check de 60 frames.
-  - 3/5: Movimento determinístico e parada sem overshoot (`test_movement.gd`).
-  - 4/5: 7 verificações de câmera e limites (`test_camera.gd`).
-  - 5/5: 7 verificações de combate, dummies, projéteis, kiting e targeting (`test_combat.gd`).
-- **verified:** Exportação Web (`scripts/export_web.ps1`) gerando pacote atualizado em `build/web/`.
+- **verified:** Suíte quíntupla (`scripts/test.ps1`) com 100% de sucesso (5/5 suítes passando, código de saída 0).
+- **verified:** Exportação Web (`scripts/export_web.ps1`) atualizada em `build/web/`.
+- **verified:** Evidências visuais lado a lado e em zoom 200% (`A_three_baseline.png`, `B_godot_corrected.png`, `C_comparison_side_by_side.png`, `D_hud_detail.png`, `E_grid_detail.png`, `F_floating_bars_detail.png`, `G_combat_damage_detail.png`, `shadows_comparison.png`, `caitlyn_edge_comparison.png`) e benchmark multi-cenário (`multi_scenario_benchmark.json`) gerados e inspecionados.
 
-## 4. Próxima ação recomendada
+## 4. Próxima Ação Recomendada
 
-1. Continuar refinamento dos cartões e ícones do StatusHUD se necessário.
-2. Manter testes e builds sincronizados na branch `port/game-x0-1to1`.
+1. Revisão visual pelo proprietário das imagens comparativas geradas em `docs/migration/visual/`.
+2. Se desejado ganho adicional de FPS Web em GPUs integradas, avaliar decimação opcional de LOD para o passe de sombra de `CaitlynComplete.glb` (atualmente 18.549 triângulos submetidos 2x por frame).

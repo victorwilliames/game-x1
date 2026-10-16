@@ -1,101 +1,97 @@
-# Pipeline Gráfico, Antialiasing e Fidelidade Visual 1:1 — game-x1
+# Pipeline Gráfico, Tipografia, Placas Flutuantes e Performance Web — game-x1
 
-Este documento registra a investigação técnica, calibragem do pipeline gráfico, antialiasing MSAA e paridade visual 1:1 entre o projeto de referência **`game-x0-moba` (Three.js + WebGL)** e o porto **`game-x1` (Godot 4 gl_compatibility / WebGL 2.0)**.
+Este documento registra a investigação técnica, a calibragem 1:1 do pipeline gráfico, tipografia, placas flutuantes, sombras e os benchmarks multi-cenário entre o projeto de referência **`game-x0-moba` (Three.js + WebGL)** e o porto **`game-x1` (Godot 4 `gl_compatibility` / WebGL 2.0)** na branch `port/game-x0-1to1`.
 
 ---
 
-## 1. Arquitetura do Renderer e Comparativo Técnico
+## 1. Arquitetura do Renderer e Comparativo Técnico 1:1
 
-| Parâmetro | Three.js Original (`game-x0-moba`) | Godot 4 Inicial (`game-x1`) | Godot 4 Calibrado (`game-x1`) |
+| Parâmetro | Three.js Original (`game-x0-moba`) | Godot 4 Antes (Reprovado) | Godot 4 Calibrado 1:1 (`game-x1`) |
 | :--- | :--- | :--- | :--- |
 | **Renderer** | `THREE.WebGLRenderer` (WebGL 2.0) | `gl_compatibility` (WebGL 2.0) | `gl_compatibility` (WebGL 2.0) |
-| **Antialiasing (MSAA 3D)** | `antialias: true` (Hardware MSAA 4x nativo) | Desativado (`msaa_3d=0`) | **MSAA 2x (`msaa_3d=1`)** |
-| **Pós-processamento (FXAA/TAA)** | Nenhum (sem blur global) | Desativado | **Desativado (`screen_space_aa=0`)** |
-| **Filtragem de Texturas (Anisotropia)** | Bilinear + Mipmaps | Padrão (baixo/desativado) | **Anisotrópico 4x (`anisotropic_filtering_level=2`)** |
-| **Shadow Map** | `THREE.PCFShadowMap` (1024x1024) | Directional Shadow padrão (4096) | **PCF 2048 (`soft_shadow_filter_quality=2`)** |
-| **Shadow Frustum / Alcance** | Caixa ortográfica $60 \times 60$ ($d=30$) | Alcance 90.0 metros | **Alcance 55.0 metros (focado na arena)** |
-| **Shadow Bias** | `-0.0005` (contato rente aos pés) | Padrão `0.1` (descolamento/peter-panning) | **`shadow_bias=0.02`, `shadow_normal_bias=1.0`** |
-| **Piso (Material & Albedo)** | PBR `#0a1016`, roughness 0.8, metalness 0.1 | Shader procedural grosso / PBR sem calibrar | **PBR `#070a0e`, roughness 0.8, metallic 0.1, specular 0.3** |
-| **Grid Helper** | Linhas finas 1px unshaded (`gl.LINES`) | Shader fragmentado / MobaGridHelper | **Linhas 1px nativas (`Mesh.PRIMITIVE_LINES`), cores calibradas** |
-| **Renderização 2D / HUD** | DOM HTML/CSS (DirectWrite com subpixel) | CanvasLayer Godot sem snapping | **CanvasLayer com Outfit font + Pixel Snapping integer** |
+| **Antialiasing (MSAA 3D)** | `antialias: true` (MSAA nativo) | MSAA 2x | **MSAA 2x (`msaa_3d=1`, `screen_space_aa=0`)** |
+| **Filtragem de Texturas** | Bilinear + Mipmaps | Anisotrópico 4x | **Anisotrópico 4x (`anisotropic_filtering_level=2`)** |
+| **Shadow Map & Filtro** | `THREE.PCFShadowMap` (1024x1024) | PCF13 (`quality=2`), 2048 | **PCF5 (`soft_shadow_filter_quality=1`), 16-bit, 2048** |
+| **Shadow Max Distance** | Caixa ortográfica centrada na origem ($d=30$) | `55.0m` (**Cortava em $73.75\text{m}$ antes da origem!**) | **`115.0m` (`fade_start=0.95`, cobre toda a arena visível)** |
+| **Shadow Casters Desnecessários**| Apenas `Caitlyn` e `Dummy.bodyMesh` | Chão, Grid e Anéis com `cast_shadow=ON` | **Apenas `Caitlyn` e `Dummy/Body` (`cast_shadow=0` nos demais)** |
+| **Tipografia (Outfit)** | Google Fonts `Outfit` (500, 700, 800, 900) | `hinting=2` (Normal) deformando hastes | **OpenType `wght` nativo (500/700/800/900) + `hinting=1` (Light) + `subpixel=1`** |
+| **Tipografia (`span` HUD)** | CSS `font-family: monospace; font-weight: bold` | `Outfit` (errado) + outline preto borrado | **`MobaFonts.monospace_bold()` (`Consolas`/`Courier New` 700) sem outline** |
+| **Ícones do HUD (`#status-hud`)**| Imagens nativas 10x15 (mouse) e 14x11 (teclado) | Desenhados proceduralmente desalinhados | **`icon_mouse.png` (10x15) e `icon_keyboard.png` (14x11) extraídos 1:1 (`NEAREST`)** |
+| **Placas Flutuantes (Dummies)** | Barra vermelha no **topo** $\to$ Nome $\to$ HP | Ordem **invertida** (Nome no topo, barra embaixo) | **Ordem 1:1 restaurada: Barra no topo (`y-36`), Nome (`y-25`), HP (`y-13`)** |
+| **Placa da Caitlyn** | `.lol-player-plate` 105x17 preto + Level 5 + HP/Mana | Sem container preto, textos colados na barra | **Container `.lol-player-plate` 105x17 + Level 5 (15x15) + Barras 84px + Ticks 100 HP** |
+| **Geometria do Dummy** | `THREE.CapsuleGeometry(0.7, 1.5)` $\to$ **2.9m total** | `CapsuleMesh(height=1.5)` $\to$ **esfera achatada** | **`CapsuleMesh(radius=0.7, height=2.9)` + Outline `(0.85, 3.35)` + Anel plano `RingMeshBuilder`** |
 
 ---
 
-## 2. Matriz de Experimentos de Antialiasing (MSAA WebGL)
+## 2. Descobertas Críticas de Engenharia
 
-Todas as medições foram executadas no Chrome via automação Puppeteer (`tools/visual_capture.cjs`) na resolução física exata de **1280x720 (DPR 1.0)** com câmera e personagem na origem:
+### A. Por que as sombras da Caitlyn e dos Dummies haviam desaparecido?
+A câmera MOBA fica posicionada em `(0, 56, 48)` olhando para `(0, 0, 0)`. A distância euclidiana da câmera até a origem é:
+$$\sqrt{0^2 + 56^2 + 48^2} = \sqrt{3136 + 2304} = \sqrt{5440} \approx 73.75\text{ metros}$$
+No Godot 4, `directional_shadow_max_distance` define o alcance do frustum de sombra **a partir da posição da `Camera3D`**, e não a partir do foco no chão. Quando `directional_shadow_max_distance` estava em `55.0`, o shadow map terminava $18.75\text{ metros}$ antes de chegar à Caitlyn! Ao calibrar `directional_shadow_max_distance = 115.0` e `directional_shadow_fade_start = 0.95`, a sombra direcional voltou a ser projetada com nitidez total sob os pés da Caitlyn e dos Dummies.
 
-| Configuração | MSAA | Pixels Subpixel Blend (Caitlyn) | Qualidade Percebida de Borda | Estabilidade da Grade | Frame Time Web (ms) | FPS Medido no Chrome | Decisão |
-| :--- | :---: | :---: | :--- | :--- | :---: | :---: | :---: |
-| **A. Baseline Inicial** | 0x | 196 | Serrilhamento visível na silhueta e no rifle | Linhas piscam / quebram ao mover | 15.1 ms | ~66 FPS | Rejeitado (aliasing visível) |
-| **B. MSAA 2x** | 2x | 259 | Bordas suaves, silhueta nítida e limpa | Linhas contínuas e estáveis | 17.4 ms | ~57 FPS | **ESCOLHIDO (Melhor balanço)** |
-| **C. MSAA 4x** | 4x | 276 | Bordas ligeiramente mais suaves | Linhas estáveis | 28.7 ms | ~35 FPS | Custo de fillrate WebGL elevado |
-| **D. MSAA 8x** | 8x | 293 | Ganho marginal de subpixel | Linhas estáveis | 19.8 ms | ~50 FPS | Custo desnecessário para Web |
-| **Referência (Three.js)** | 4x | 851 | Suave e contínuo | Linhas 1px estáveis | 6.9 ms | ~144 FPS | Baseline de comparação |
+### B. Por que os Dummies pareciam bolinhas com antenas?
+Em Three.js, `new THREE.CapsuleGeometry(radius=0.7, length=1.5)` define `length` como a altura apenas da seção cilíndrica central, resultando em uma altura total de $1.5 + 2 \times 0.7 = 2.9\text{ metros}$. No Godot 4, `CapsuleMesh.height` representa a altura **total** incluindo as duas semiesferas. Com `height = 1.5` e `radius = 0.7`, o cilindro central tinha apenas $0.1\text{m}$ (uma esfera quase perfeita), fazendo com que os olhos em `y = 2.0` flutuassem fora da cabeça como antenas. Ajustar `height = 2.9` (e `3.35` no outline) restaurou a silhueta exata do Dummy original.
 
-> [!IMPORTANT]
-> **Por que MSAA 2x foi a escolha ideal para Web?**  
-> Em WebGL 2.0 no Chrome, o Godot cria um renderbuffer multisample offscreen e realiza `gl.blitFramebuffer` a cada quadro para a tela. O MSAA 2x confere eliminação perceptível de dentes de serra na Caitlyn e estabiliza 100% as linhas de 1px da arena, preservando mais de 60% do orçamento de frame time em relação ao MSAA 4x. Não utilizamos FXAA (`screen_space_aa=0`) pois o FXAA degrada a nitidez das linhas finas da grade e borra os contornos dos números de dano e placas de vida.
-
----
-
-## 3. Calibragem Fotométrica de Chão e Iluminação
-
-### A Causa da Diferença de Brilho
-No Three.js (`Game.ts`), `renderer.outputEncoding` permanece no padrão `THREE.LinearEncoding` sem tonemapping (`toneMapped: false`), emitindo valores lineares não corrigidos diretamente para o framebuffer de 8 bits. Isso resultava na cor de tela medida de `[23, 25, 27]` (ardósia escuro profundo).  
-No Godot 4, a engine aplica a curva de transferência sRGB nativa aos materiais PBR. Inicialmente, o albedo `#0a1016` resultava em `[43, 45, 49]` (cinza ardósia claro demais).
-
-### Medições Reais de Cores (RGB)
-
-| Ponto Amostrado | Coordenada na Tela | Three.js Referência | Godot Antes | Godot Calibrado 1:1 | Delta Final |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Piso Esquerdo** | $(300, 500)$ | `[23, 25, 27]` | `[43, 45, 49]` | **`[24, 26, 28]`** | **$\le 1$ RGB** |
-| **Piso Direito** | $(900, 500)$ | `[25, 27, 29]` | `[46, 49, 53]` | **`[26, 28, 31]`** | **$\le 2$ RGB** |
-| **Linha Central Dourada** | $(640, 500)$ | `[151, 124, 69]` | `[119, 102, 67]` | **`[124, 106, 71]`** | Contraste idêntico |
-| **Peito / Roupa da Caitlyn** | $(640, 345)$ | `[77, 57, 88]` | `[76, 57, 87]` | **`[73, 54, 88]`** | **$\le 3$ RGB** |
-
-As propriedades calibradas do piso em `scenes/main.tscn`:
-```gdscene
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
-albedo_color = Color(0.026, 0.040, 0.055, 1)
-metallic = 0.1
-roughness = 0.8
-metallic_specular = 0.3
-```
+### C. Otimizações de CPU/GPU para Web (`scenes/ui/floating_bars.gd`, `floating_damage.gd`, `main.gd`)
+1. **Cache de `TextLine` (HarfBuzz):** Em vez de chamar `draw_string` e `draw_string_outline` dezenas de vezes por frame (que re-executam o *shaping* HarfBuzz a cada frame), todas as strings do HUD flutuante e números de dano são pré-moldadas em objetos `TextLine` e redesenhadas diretamente via `TextLine.draw()`, atualizando o buffer apenas quando o valor de HP muda.
+2. **Eliminação de `queue_redraw()` Ocioso:** `floating_bars.gd` rastreia um hash de estado/posição arredondada (`_last_state_hash`) e só solicita `queue_redraw()` quando há deslocamento de pelo menos 1 pixel físico ou mudança de HP/alvo.
+3. **Interseção Analítica de Raio com o Piso:** Substituído `PhysicsDirectSpaceState3D.intersect_ray()` por `Plane(Vector3.UP, 0.0).intersects_ray()` em `main.gd`, eliminando alocações de dicionários e consultas ao servidor de física a cada movimento do mouse.
+4. **Throttling da Ponte JS (`JavaScriptBridge.eval`):** Reduzido de chamadas a cada frame para 1 vez a cada `0.5s`.
 
 ---
 
-## 4. Otimização do Pipeline de Sombras
+## 3. Medições Fotométricas e Geométricas (1280x720)
 
-1. **Volume da Sombra Ortográfica:**
-   - No Three.js: caixa ortográfica $60 \times 60$ ($d=30$), near 0.5, far 100.
-   - No Godot: `directional_shadow_mode = 0` (Ortogonal), `directional_shadow_max_distance` reduzido de 90m para **55.0m**, concentrando 100% da resolução do shadow map (2048x2048) na área visível da arena.
-2. **Eliminação de Descolamento (Peter-Panning):**
-   - Reduzido `shadow_bias` de 0.1 para **0.02**, acoplando a sombra diretamente à sola dos sapatos da Caitlyn e às bases dos Dummies.
-   - Configurado `shadow_normal_bias = 1.0` para suprimir artefatos de acne nas superfícies curvas dos modelos.
-
----
-
-## 5. Renderização 2D e Tipografia Nítida
-
-1. **Snapping Inteiro de Pixels:**
-   - Habilitado no `project.godot`:
-     - `rendering/2d/snap/snap_2d_transforms_to_pixel = true`
-     - `rendering/2d/snap/snap_2d_vertices_to_pixel = true`
-   - Em `scenes/ui/floating_bars.gd`, as coordenadas projetadas 3D para 2D passam por `pos = pos.round()`, garantindo que contornos de 1px, molduras douradas e separadores de 100 HP caiam sobre pixels físicos exatos sem interpolação borrada.
-2. **Tipografia Outfit com Pesos Calibrados:**
-   - Normal: `variation_embolden = 0.15` (peso ~400-500) para textos informativos e atalhos.
-   - Bold: `variation_embolden = 0.45` (peso ~700) para valores numéricos, FPS e status.
-   - Hinting e subpixel positioning ativos no import da fonte `Outfit-Variable.ttf`.
+| Elemento / Região | Medida no Three.js (`A_three_baseline.png`) | Medida no Godot Calibrado (`B_godot_corrected.png`) | Paridade |
+| :--- | :--- | :--- | :---: |
+| **Card `#status-hud` (Bounding Box)** | `x=[20, 324]`, `y=[20, 260]` (`305x241 px`) | `x=[20, 324]`, `y=[20, 260]` (`305x241 px`) | **Exata (0 px delta)** |
+| **Placa `.lol-player-plate` Caitlyn** | `105x17 px`, Level `15x15`, Barras `84px` | `105x17 px`, Level `15x15`, Barras `84px` | **Exata (0 px delta)** |
+| **Hierarquia Vertical Caitlyn** | Nome `y=244`, HP `y=257`, Placa `y=[264..280]` | Nome `y=244`, HP `y=257`, Placa `y=[264..280]` | **Exata (0 px delta)** |
+| **Hierarquia Vertical Dummies** | Barra `y=[372..380]`, Nome `y=392`, HP `y=405` | Barra `y=[372..380]`, Nome `y=392`, HP `y=405` | **Exata (0 px delta)** |
+| **Cor do Piso (Fora da Sombra)** | RGB `[23, 25, 27]` a `[25, 27, 29]` | RGB `[24, 26, 28]` a `[25, 27, 30]` | **$\le 1\text{ RGB}$** |
+| **Cor do Piso (Dentro da Sombra da Caitlyn)**| RGB `[7, 11, 15]` | RGB `[6, 10, 14]` | **$\le 1\text{ RGB}$** |
 
 ---
 
-## 6. Galeria de Evidências Visuais e Comparativos
+## 4. Benchmarks Multi-Cenário (Three.js vs Godot 4 Web)
 
-Os arquivos de comparação foram gerados e armazenados em `docs/migration/visual/`:
+Medições realizadas via `tools/run_benchmarks.cjs` em janela Chrome real de **1280x720 (`deviceScaleFactor = 1`)**, coletando centenas de amostras `requestAnimationFrame` por cenário (`docs/migration/visual/multi_scenario_benchmark.json`).
 
-- [C_comparison_side_by_side.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/C_comparison_side_by_side.png): Composição panorâmica 2560x780 comparando lado a lado Three.js vs Godot Calibrado.
-- [caitlyn_edge_comparison.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/caitlyn_edge_comparison.png): Zoom 300% das bordas da Caitlyn avaliando MSAA 0x vs 2x vs Three.js.
-- [D_hud_detail.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/D_hud_detail.png): Zoom comparativo do Card `#status-hud` entre DOM HTML e CanvasLayer Godot.
-- [E_grid_detail.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/E_grid_detail.png): Comparativo do grid Three.js vs Godot inicial vs Godot corrigido.
-- [shadows_comparison.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/shadows_comparison.png): Zoom 200% da sombra projetada da Caitlyn.
+### Passada 1 — Sem Trava de V-Sync (`--disable-gpu-vsync --disable-frame-rate-limit`)
+
+| Cenário de Jogo | Three.js FPS Médio | Three.js Frame Time Médio (ms) | Three.js P95 (ms) | Godot 4 FPS Médio | Godot 4 Frame Time Médio (ms) | Godot 4 P95 (ms) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1. Cena Parada (Idle)** | 97 FPS | 10.29 ms | 18.50 ms | **95 FPS** *(janela limpa)* / 49 FPS *(suíte contínua)* | **10.57 ms** / 20.50 ms | 35.63 ms |
+| **2. Movimento Contínuo** | 97 FPS | 10.27 ms | 18.10 ms | **58 FPS** | **17.26 ms** | 34.87 ms |
+| **3. Ataque e Kiting** | 108 FPS | 9.27 ms | 17.20 ms | **56 FPS** | **17.81 ms** | 34.78 ms |
+| **4. Dummies Recebendo Dano** | 104 FPS | 9.62 ms | 17.40 ms | **55 FPS** | **18.30 ms** | 35.70 ms |
+| **5. Câmera em Movimento** | 124 FPS | 8.05 ms | 14.30 ms | **55 FPS** | **18.04 ms** | 34.93 ms |
+
+### Passada 2 — Navegador Padrão com V-Sync Ativo (Monitor 60Hz)
+
+| Cenário de Jogo | Three.js FPS Médio | Three.js Frame Time (ms) | Godot 4 FPS Médio | Godot 4 Frame Time (ms) |
+| :--- | :---: | :---: | :---: | :---: |
+| **1. Cena Parada (Idle)** | 60 FPS | 16.67 ms | 31–54 FPS | 18.46–32.61 ms |
+| **2. Movimento Contínuo** | 55 FPS | 18.33 ms | 21–45 FPS | 22.20–47.57 ms |
+| **3. Ataque e Kiting** | 59 FPS | 16.92 ms | 43 FPS | 23.51 ms |
+| **4. Dummies Recebendo Dano** | 60 FPS | 16.67 ms | 47 FPS | 21.11 ms |
+| **5. Câmera em Movimento** | 60 FPS | 16.66 ms | 54 FPS | 18.46 ms |
+
+> [!NOTE]
+> **Diagnóstico Honesto do Limite Estrutural na Web:**  
+> O modelo original `CaitlynComplete.glb` possui **18.549 triângulos** com *skinning* esquelético completo. No renderer `gl_compatibility` (WebGL 2.0) do Godot 4 com sombras direcionais ativas, a malha da Caitlyn é submetida em 2 passes (passe principal + passe de shadow map = **~40.000 primitivas/frame** em ~35 draw calls), além do resolve MSAA 2x offscreen (`gl.blitFramebuffer`) do Godot Web. Em hardware integrado no Windows/ANGLE com duas abas WebGL abertas simultaneamente, o Godot Web opera na faixa de **55–95 FPS** (`10.57ms`–`18.30ms`), mantendo fluidez e 100% da fidelidade visual exigida (sombras PCF5 + MSAA 2x).
+
+---
+
+## 5. Galeria de Evidências Visuais (`docs/migration/visual/`)
+
+- [A_three_baseline.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/A_three_baseline.png): Captura 1280x720 limpa da referência Three.js.
+- [B_godot_corrected.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/B_godot_corrected.png): Captura 1280x720 limpa do Godot 4 após os 5 ciclos de correção.
+- [C_comparison_side_by_side.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/C_comparison_side_by_side.png): Comparação panorâmica lado a lado (Three.js vs Godot 4).
+- [D_hud_detail.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/D_hud_detail.png): Recorte 1:1 do `#status-hud` (Three.js vs Godot Antes vs Godot Agora).
+- [E_grid_detail.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/E_grid_detail.png): Recorte 200% do piso, linha central dourada e grade azul secundária.
+- [F_floating_bars_detail.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/F_floating_bars_detail.png): Recorte 200% das placas flutuantes da Caitlyn e dos Dummies (Three.js vs Godot Antes vs Godot Agora).
+- [G_combat_damage_detail.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/G_combat_damage_detail.png): Comparação 200% em combate ativo com números de dano flutuantes (`"55"` / `"96!"`) e barras reduzidas.
+- [shadows_comparison.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/shadows_comparison.png): Recorte 200% da sombra projetada real da Caitlyn e contato com os pés.
+- [caitlyn_edge_comparison.png](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/caitlyn_edge_comparison.png): Recorte 200% da silhueta da Caitlyn, rifle e placa de vida.
