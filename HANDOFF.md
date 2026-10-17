@@ -228,3 +228,20 @@ Para atingir 300 FPS (3.33 ms) com antialiasing ativo, a estratégia ideal **nã
 - **Não alterado:** `floating_bars.gd` mantém projeção arredondada, barras de 1px, contornos, sombras e geometria originais. Mudar o snapping completo sem comparar imagens pode borrar barras ou aumentar draw calls; tratar como etapa A/B separada.
 - **Validar no Antigravity:** `git pull --ff-only origin main` (preservar alterações locais), cinco suítes via `scripts/test.ps1`, export via `scripts/export_web.ps1`, capturas antes/depois 1280×720 DPR 1 dos textos de 9px (Caitlyn/Dummies/HUD), movimento/câmera, contraste e legibilidade, draw calls, CPU/GPU e FPS com `full` (três repetições). Confirmar no Chrome Web. Reverter via novo commit se houver piora relevante.
 - **Limitação:** edição remota via GitHub, sem Godot/Chrome local nesta sessão. Melhoria visual e testes não foram comprovados.
+
+
+---
+
+## ChatGPT — POC de FXAA real com cópia regional, somente benchmark (base `304d72d`)
+
+**Motivação:** os resultados anteriores de `crop_copy` (305,7 FPS equivalentes nativos) NÃO tinham filtro FXAA; esse número não demonstra AA e 300 FPS simultaneamente.
+
+**Dois modos novos em `scripts/perf_bench.gd`:**
+- `crop_fxaa_draw`: shader FXAA original em um quad central de 50% × 50% da tela; cópia automática da tela cheia.
+- `crop_fxaa_copy`: o MESMO shader FXAA original no MESMO quad, com um único `BackBufferCopy` da região + margem de 16px. Nenhum shader de produção é editado.
+
+**Comparações controladas:** `full` vs `crop_fxaa_draw` mede desempenho de FXAA restrito mantendo a cópia cheia; `crop_fxaa_draw` vs `crop_fxaa_copy` mede efeito da cópia regional com o MESMO filtro/quad; `crop_fxaa_copy` vs `no_fxaa` mostra o custo residual do pipeline parcial. Executar três repetições de 12s em cinco cenários no Windows e Chrome Web e reportar frame interval p50/p95/p99 e GPU nativa quando disponível. Scripts `tools/run_crop_fxaa_web.cjs`, `tools/capture_crop_fxaa_modes.gd` e `tools/analyze_crop_fxaa.py` acompanham o teste.
+
+**AVISO DE QUALIDADE:** região central fixa é diagnóstico, não acompanha a Caitlyn, dummies, projéteis, grid, sombras, rings ou cenário. Bordas fora do ROI ficam SEM antialiasing; podem surgir seams na fronteira. Capturar ROI interno, bordas e quadros durante movimento e câmera. Nem mesmo um ganho elevado prova paridade visual. Nenhuma mudança é feita no jogo normal; `_finish()` restaura `full`.
+
+**Antigravity:** fazer pull preservando alterações locais, validar parser e exportação Web, testar retorno a `full`, F1/F2/F4, screenshot dos quatro modos, ausência de pixels inválidos/artefatos no recorte, cinco suítes de gameplay, benchmarks pareados e análise. Interromper publicação de números se runner/report estiver incompleto; não editar gameplay ou shaders. Publicar evidências tipográficas anteriores e desta POC somente após verificar limpeza de dados sensíveis. **O ChatGPT não dispõe de Godot/Chrome local neste turno; a POC é não validada.**

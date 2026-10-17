@@ -21,9 +21,13 @@ extends Node
 ##   pass_only:  fullscreen auto-copy + fullscreen passthrough shader
 ##   crop_draw:  fullscreen auto-copy + cropped central 50%x50% passthrough
 ##   crop_copy:  explicit BackBufferCopy COPY_MODE_RECT + cropped passthrough
+##   crop_fxaa_draw:  full screen copy + genuine FXAA on center 25% of viewport
+##   crop_fxaa_copy:  regional BackBufferCopy + genuine FXAA on center 25%
 ##   no_fxaa:    no post-processing layer (no copy, no quad)
-##   crop_* are diagnostic ONLY: center 25% viewport area with NO AA.
-##   They cannot establish full-scene visual parity. Differences approximate
+##   crop_* are diagnostic ONLY: center 25% viewport area. crop_fxaa_* use
+##   real FXAA INSIDE the crop but leave outer scene aliased, with possible
+##   boundary seams. They do NOT establish full-scene visual parity.
+##   Differences approximate
 ##   costs under matched conditions; not precise isolated GPU timings.
 ##
 ## Configs are INTERLEAVED per round (A,B,C,A,B,C,...) so thermal / turbo drift on laptops
@@ -60,7 +64,8 @@ func _benchmark_crop_rect() -> Rect2:
 	return Rect2((vp_size * 0.25).round(), (vp_size * 0.5).round())
 
 func _configure_benchmark_copy(fxaa_rect: ColorRect, cfg: String, roi: Rect2) -> void:
-	if cfg == "crop_copy" and _benchmark_region_copy == null:
+	var regional_copy := cfg == "crop_copy" or cfg == "crop_fxaa_copy"
+	if regional_copy and _benchmark_region_copy == null:
 		_benchmark_region_copy = BackBufferCopy.new()
 		_benchmark_region_copy.name = "BenchRegionBackBufferCopy"
 		_benchmark_region_copy.copy_mode = BackBufferCopy.COPY_MODE_DISABLED
@@ -69,7 +74,7 @@ func _configure_benchmark_copy(fxaa_rect: ColorRect, cfg: String, roi: Rect2) ->
 		parent_node.move_child(_benchmark_region_copy, fxaa_rect.get_index())
 
 	if _benchmark_region_copy:
-		if cfg == "crop_copy":
+		if regional_copy:
 			# Important: explicitly copy only the diagnostic region, preventing the
 			# automatic fullscreen back-buffer copy from hint_screen_texture.
 			var viewport_rect := get_viewport().get_visible_rect()
@@ -82,7 +87,7 @@ func _configure_benchmark_copy(fxaa_rect: ColorRect, cfg: String, roi: Rect2) ->
 
 	# Reset to exact scene-authored fullscreen layout when not testing a crop.
 	# These changes occur only in benchmark mode (_run), never in normal play.
-	var crop := (cfg == "crop_draw" or cfg == "crop_copy")
+	var crop := cfg == "crop_draw" or cfg == "crop_copy" or cfg == "crop_fxaa_draw" or cfg == "crop_fxaa_copy"
 	fxaa_rect.anchor_left = 0.0
 	fxaa_rect.anchor_top = 0.0
 	fxaa_rect.anchor_right = 0.0 if crop else 1.0
@@ -213,6 +218,7 @@ func _apply_config(cfg: String) -> void:
 			ui_on = false
 	# Diagnostic configurations retain the original scene and UI while
 	# independently testing fullscreen copy, reduced raster, and regional copy.
+	# crop_fxaa_* retain the production shader within the same centered ROI.
 	# Normal game mode never invokes this method.
 	if fxaa_rect:
 		if _baseline_fxaa_material == null:
