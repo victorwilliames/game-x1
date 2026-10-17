@@ -2,7 +2,7 @@
 
 **Atualizado por:** Antigravity em 2026-10-17  
 **Branch ativa:** `main` (Branch oficial única)  
-**Status:** VALIDAÇÃO EMPÍRICA CONCLUÍDA (Commits `304d72d` e `81a438b`). Confirmada melhora de nitidez na fonte Outfit 9px com oversampling 2× e subpixel auto sem sobrecusto de draw calls/CPU/GPU. Concluída auditoria pareada do experimento de FXAA real recortado: comprovada redução de 0.71 ms GPU pela limitação de fragmentos a 25% da área e 0.31 ms GPU pela cópia regional BackBufferCopy. Evidências visuais de bordas/costuras e datasets JSON gerados e documentados em `docs/migration/visual/`.
+**Status:** VALIDAÇÃO DE MSAA 2X/4X VS FXAA CONCLUÍDA (Commit `062f486`). Comprovado empiricamente que o FXAA de produção é 2.3× mais rápido que MSAA 4x e 1.8× mais rápido que MSAA 2x (FXAA: 3.71 ms / 269.7 FPS vs MSAA 2x: 6.65 ms / 150.5 FPS e MSAA 4x: 8.59 ms / 116.5 FPS no Windows nativo; e 7.21 ms / 138.7 FPS no Web Chrome). Auditoria visual demonstrou que o hardware MSAA NÃO suaviza linhas de shaders/grid da arena, deixando o piso serrilhado, enquanto o FXAA entrega antialiasing completo de cena. Datasets e evidências documentados em `docs/migration/visual/`.
 
 
 ---
@@ -347,3 +347,72 @@ Foram executadas baterias completas e pareadas de benchmarks (3 execuções × 1
 **Inspeção visual obrigatória:** Godot/MSAA 3D funciona no Compatibility, mas **não é equivalente ao FXAA de pós-processamento** em linhas do grid (`GridHelper`), bordas de anéis, transparência, efeitos e aliasing produzido em shader. Comparar capturas em zoom 4× e em tamanho real de Caitlyn, dummies, grid dourado/azul, anéis e sombras; inspecionar também durante movimento de câmera, verificar 1px do HUD e qualidade das fontes 9px. Não aceitar regressões por aumento aparente de FPS.
 
 **Testar antes de aprovar:** cinco suítes, export Web, atalhos F1/F2/F4, restauração para `full` após benchmark, disponibilidade real do MSAA2x/4x no GPU/driver do navegador, cenário/frames corretamente executados, draw calls e tempo GPU quando disponível (WebGL não possui métrica equivalente aqui). Não afirmar 300 FPS com qualidade plena sem medidas e equivalência visual comprovada. **O código foi alterado remotamente no GitHub, sem executar Godot/Chrome neste turno.**
+
+
+---
+
+## 8. Validação Empírica no Antigravity: MSAA 2×/4× vs FXAA Customizado (`062f486`)
+
+**Data:** 2026-10-17  
+**Ambientes Reais Validados:**
+- Windows 10 Nativo: Intel(R) Core(TM) i5-8250U, Intel(R) UHD Graphics 620, Godot 4.7.2-stable (Compatibility / OpenGL 3.3).
+- Chrome WebGL: Chrome 149.0.0.0 (Windows x64), WebGL 2.0 (OpenGL ES 3.0 Chromium), 1280×720 DPR 1.
+
+---
+
+### A. Resultados Estatísticos Pareados (3 Execuções × 12s + 6s Warmup em 5 Cenários = 60 Registros/Ambiente)
+
+#### 1. Windows Nativo (`docs/migration/visual/aa_fullscreen_native.json`):
+
+| Configuração | Frame Time Médio | FPS Equivalente | Frame Time P50 | Frame Time P95 | Frame Time P99 | GPU Viewport | Draw Calls |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`full` (FXAA Produção)** | **3.708 ms** | **269.7 FPS** | **3.52 ms** | 5.13 ms | 6.41 ms | **3.22 ms** | 36-42 |
+| **`msaa2x` (MSAA 2× sem FXAA)** | 6.646 ms | 150.5 FPS | 6.41 ms | 8.94 ms | 10.59 ms | 5.64 ms | 35-42 |
+| **`msaa4x` (MSAA 4× sem FXAA)** | 8.587 ms | 116.5 FPS | 8.38 ms | 11.28 ms | 13.43 ms | 7.55 ms | 35-42 |
+| **`no_fxaa` (3D Puro sem AA)** | 3.028 ms | 330.3 FPS | 2.79 ms | 4.48 ms | 5.71 ms | 2.12 ms | 35-42 |
+
+**Diferenças Pareadas Nativas (Média de 15 pares correspondentes cenário × run):**
+- **`full` vs `msaa2x`:** FXAA é **2.938 ms mais rápido** no total (**-2.421 ms na GPU**, 0/15 positivo para MSAA). O FXAA entrega **+79.2% de FPS** em relação ao MSAA 2×.
+- **`full` vs `msaa4x`:** FXAA é **4.878 ms mais rápido** no total (**-4.335 ms na GPU**, 0/15 positivo para MSAA). O FXAA é **2.3× mais rápido** (+131.5% FPS) que o MSAA 4×.
+- **Custo isolado do MSAA 2× (`msaa2x - no_fxaa`):** +3.619 ms (+3.430 ms na GPU, 15/15 positivo).
+- **Custo isolado do MSAA 4× (`msaa4x - no_fxaa`):** +5.559 ms (+5.344 ms na GPU, 15/15 positivo).
+- **Custo do passe FXAA (`full - no_fxaa`):** +0.680 ms (+1.100 ms na GPU, 15/15 positivo).
+
+#### 2. Chrome WebGL (`docs/migration/visual/aa_fullscreen_web.json`):
+
+| Configuração | Frame Time Médio | FPS Equivalente | Frame Time P50 | Frame Time P95 | Frame Time P99 | Draw Calls |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`full` (FXAA Produção)** | **7.210 ms** | **138.7 FPS** | **6.96 ms** | 8.86 ms | 10.95 ms | 36-43 |
+| **`msaa2x` (MSAA 2× sem FXAA)** | 10.815 ms | 92.5 FPS | 10.56 ms | 13.84 ms | 16.09 ms | 35-42 |
+| **`msaa4x` (MSAA 4× sem FXAA)** | 12.923 ms | 77.4 FPS | 12.69 ms | 16.91 ms | 19.24 ms | 35-42 |
+| **`no_fxaa` (3D Puro sem AA)** | 5.553 ms | 180.1 FPS | 5.39 ms | 6.70 ms | 8.26 ms | 35-43 |
+
+**Diferenças Pareadas Web (Média de 15 pares correspondentes cenário × run):**
+- **`full` vs `msaa2x`:** FXAA é **3.605 ms mais rápido** (MSAA 2× perdeu em 14/15 pares).
+- **`full` vs `msaa4x`:** FXAA é **5.713 ms mais rápido** (MSAA 4× perdeu em 15/15 pares).
+- **Custo do MSAA 2× na Web:** +5.261 ms.
+- **Custo do MSAA 4× na Web:** +7.370 ms.
+
+---
+
+### B. Diagnóstico Técnico da Causa Raiz do Desempenho do MSAA
+
+1. **Gargalo de Largura de Banda de VRAM Unificada:** Em arquiteturas com GPU integrada (Intel UHD 620, processadores mobile e laptops comuns), a VRAM é compartilhada com a RAM do sistema através de um barramento limitado.
+2. **Multiplicação de Buffers de Amostragem:**
+   - O MSAA 2× dobra o tamanho do framebuffer 3D e buffers de profundidade/stencil (de 1× para 2× amostras por pixel).
+   - O MSAA 4× quadruplica o tamanho do framebuffer 3D (para 14.7 MB em 1280×720).
+3. **Custo do Multisample Resolve:** A cada quadro, a GPU precisa resolver as multi-amostras para o framebuffer final. No `gl_compatibility` (OpenGL 3.3 e WebGL 2.0), essa operação satura o barramento de memória, consumindo **5.64 ms na GPU em 2×** e **7.55 ms em 4×** — contra apenas **3.22 ms do FXAA completo** e **2.12 ms do 3D puro**.
+
+---
+
+### C. Auditoria Visual e Perda de Fidelidade no MSAA
+
+As evidências visuais capturadas em [`aa_modes_visual_comparison.png`](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/aa_modes_visual_comparison.png) e zooms 4× ([`aa_caitlyn_zoom_4x.png`](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/aa_caitlyn_zoom_4x.png), [`aa_grid_rings_zoom_4x.png`](file:///c:/.PROJETOS%20-%20Sites%202026/godot/game-x1/docs/migration/visual/aa_grid_rings_zoom_4x.png)) comprovam:
+
+1. **Incapacidade do MSAA de Suavizar Shaders e Texturas:**
+   - O hardware MSAA atua **estritamente nas bordas geométricas de polígonos/triângulos**.
+   - As linhas da arena (`GridHelper`, linhas diagonais e grade do piso) são desenhadas via **fragment shaders e texturas lineares no quad do piso**.
+   - No MSAA 2× e 4×, todas as amostras do píxel caem dentro do mesmo polígono do piso, recebendo a mesma saída de fragmento. **O grid inteiro permanece 100% serrilhado, idêntico ao `no_fxaa`!**
+2. **Anéis de Alcance e Seleção:** Os círculos de projeção no chão também sofrem de serrilhamento severo sem o pós-processamento de luminância do FXAA.
+3. **Fidelidade Visual Superior do FXAA:** O FXAA atua no espaço de imagem pós-resolução sobre o buffer 3D, suavizando tanto a silhueta da heroína/dummies quanto as linhas finas do grid e os círculos de combate, entregando fidelidade 1:1 ao Three.js original com mais do que o dobro do framerate do MSAA.
+4. **Conclusão:** O MSAA 2× e 4× é uma alternativa inviável para o projeto: possui **pior qualidade visual** (grade serrilhada) e **desempenho substancialmente inferior** (-79% a -131% FPS).
