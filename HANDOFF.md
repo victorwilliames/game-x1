@@ -1,8 +1,8 @@
 # HANDOFF — Memória Operacional e Continuidade Imediata (`game-x1`)
 
-**Atualizado por:** Antigravity (Gemini 3.8 Flash) em 2026-10-16  
-**Branch ativa:** `main` (Branch oficial única; `port/game-x0-1to1` integrada e concluída)  
-**Status:** DIAGNÓSTICO DO CUSTO DE FXAA CONCLUÍDO (Commit `2f43f05`). Concluídos benchmarks pareados de isolamento de custo (3 repetições, 12s, 5 cenários) em Windows Nativo e Web Chrome. Comprovado empiricamente que o algoritmo do shader FXAA custa apenas +0.12 ms na GPU nativa (10.6% do passe), enquanto a captura/cópia da tela cheia (`hint_screen_texture`) e composição do quad respondem por +1.01 ms (89.4% do overhead total). Evidências visuais e dados salvos em `docs/migration/visual/`.
+**Atualizado por:** Antigravity em 2026-10-17  
+**Branch ativa:** `main` (Branch oficial única)  
+**Status:** VALIDAÇÃO EMPÍRICA CONCLUÍDA (Commits `304d72d` e `81a438b`). Confirmada melhora de nitidez na fonte Outfit 9px com oversampling 2× e subpixel auto sem sobrecusto de draw calls/CPU/GPU. Concluída auditoria pareada do experimento de FXAA real recortado: comprovada redução de 0.71 ms GPU pela limitação de fragmentos a 25% da área e 0.31 ms GPU pela cópia regional BackBufferCopy. Evidências visuais de bordas/costuras e datasets JSON gerados e documentados em `docs/migration/visual/`.
 
 
 ---
@@ -245,3 +245,88 @@ Para atingir 300 FPS (3.33 ms) com antialiasing ativo, a estratégia ideal **nã
 **AVISO DE QUALIDADE:** região central fixa é diagnóstico, não acompanha a Caitlyn, dummies, projéteis, grid, sombras, rings ou cenário. Bordas fora do ROI ficam SEM antialiasing; podem surgir seams na fronteira. Capturar ROI interno, bordas e quadros durante movimento e câmera. Nem mesmo um ganho elevado prova paridade visual. Nenhuma mudança é feita no jogo normal; `_finish()` restaura `full`.
 
 **Antigravity:** fazer pull preservando alterações locais, validar parser e exportação Web, testar retorno a `full`, F1/F2/F4, screenshot dos quatro modos, ausência de pixels inválidos/artefatos no recorte, cinco suítes de gameplay, benchmarks pareados e análise. Interromper publicação de números se runner/report estiver incompleto; não editar gameplay ou shaders. Publicar evidências tipográficas anteriores e desta POC somente após verificar limpeza de dados sensíveis. **O ChatGPT não dispõe de Godot/Chrome local neste turno; a POC é não validada.**
+
+
+---
+
+## 7. Validação Empírica no Antigravity: Outfit 9px (`304d72d`) e POC de FXAA Real Recortado (`81a438b`)
+
+**Data:** 2026-10-17  
+**Ambientes Reais Validados:**
+- Windows 10 Nativo: Intel(R) Core(TM) i5-8250U, Intel(R) UHD Graphics 620, Godot 4.7.2-stable (Compatibility / OpenGL 3.3).
+- Chrome WebGL: Chrome 149.0.0.0 (Windows x64), WebGL 2.0 (OpenGL ES 3.0 Chromium), 1280×720 DPR 1.
+
+---
+
+### A. Validação do Ajuste Tipográfico Outfit 9px (Commit `304d72d`)
+
+1. **Testes e Build:**
+   - 5/5 suítes automatizadas (`scripts/test.ps1`) aprovadas com 100% de sucesso.
+   - Export Web (`scripts/export_web.ps1`) gerado limpo e servido com HTTP 200 OK.
+2. **Inspeção Visual e Legibilidade (`docs/migration/visual/`):**
+   - `typography_outfit_before_after.png`: O oversampling 2× e o subpixel positioning auto proporcionaram ganho evidente na definição dos traços finos dos rótulos `"Caitlyn"`, `"Dummy (Estático)"` e `"Dummy (Móvel)"` em 9px.
+   - As bordas das fontes mantêm contraste sem introduzir borramento difuso ou halos espúrios.
+   - `typography_motion_legibility.png`: Verificada a legibilidade durante movimento da heroína e panorâmica de câmera; a rasterização mantém-se estável sem jitter tipográfico.
+3. **Métricas de Performance (`perf_bench_outfit_validation.json`):**
+   - Draw calls da UI e da cena mantidas exatamente em 38.
+   - Ausência total de sobrecusto na CPU ou GPU (FPS e frame times idênticos à baseline anterior).
+
+---
+
+### B. Validação da POC de FXAA Real com Recorte Regional (Commit `81a438b`)
+
+Foram executadas baterias completas e pareadas de benchmarks (3 execuções × 12s + 6s warmup em 5 cenários = 60 registros por plataforma) nos quatro modos:
+
+1. `full`: Shader FXAA de produção fullscreen (cópia automática da tela inteira).
+2. `crop_fxaa_draw`: Shader FXAA de produção restrito a um quad central de 50%×50% (25% da área), mantendo cópia de tela inteira (`hint_screen_texture`).
+3. `crop_fxaa_copy`: Shader FXAA de produção no mesmo quad central de 50%×50%, com `BackBufferCopy` em `COPY_MODE_RECT` na região ROI + 16px.
+4. `no_fxaa`: Renderização 3D pura sem pós-processamento de antialiasing.
+
+#### 1. Resultados Windows Nativo (`docs/migration/visual/crop_fxaa_native.json`):
+
+| Configuração | Frame Time Médio | FPS Equivalente | Frame Time P50 | Frame Time P95 | Frame Time P99 | GPU Viewport | Draw Calls |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`full` (Produção)** | 4.366 ms | 229.0 FPS | 4.15 ms | 6.29 ms | 8.29 ms | 3.44 ms | 38-43 |
+| **`crop_fxaa_draw`** | 3.641 ms | 274.6 FPS | 3.46 ms | 5.04 ms | 6.74 ms | 2.73 ms | 38-43 |
+| **`crop_fxaa_copy`** | **3.457 ms** | **289.2 FPS** | **3.30 ms** | 4.86 ms | 6.53 ms | **2.42 ms** | 38-43 |
+| **`no_fxaa`** | 2.997 ms | 333.7 FPS | 2.82 ms | 4.27 ms | 5.87 ms | 2.03 ms | 35-42 |
+
+**Diferenças Pareadas Nativas (Média de 15 pares correspondentes cenário × run):**
+- **`full - crop_fxaa_draw` (Economia da redução de rasterização do FXAA):** **+0.725 ms tempo total** (GPU: **+0.707 ms**, 13/15 positivo). Reduzir a área de fragmentos do shader FXAA para 25% economiza 0.71 ms de GPU.
+- **`crop_fxaa_draw - crop_fxaa_copy` (Economia da cópia regional BackBufferCopy):** **+0.184 ms tempo total** (GPU: **+0.311 ms**, 11/15 positivo). Evitar a cópia de tela inteira economiza 0.31 ms adicionais de GPU.
+- **`crop_fxaa_copy - no_fxaa` (Sobrecusto residual do pipeline recortado):** **+0.461 ms tempo total** (GPU: **+0.393 ms**, 13/15 positivo).
+- **`full - no_fxaa` (Custo total do passe de FXAA fullscreen de produção):** **+1.370 ms tempo total** (GPU: **+1.411 ms**, 15/15 positivo).
+
+> [!NOTE]
+> No Windows nativo, a mediana (P50) do modo `crop_fxaa_copy` registrou **3.30 ms**, rompendo a barreira técnica de 3.33 ms (300 FPS). No entanto, conforme detalhado abaixo, essa modalidade é estritamente diagnóstica e não atende aos requisitos visuais de produção.
+
+#### 2. Resultados Chrome WebGL (`docs/migration/visual/crop_fxaa_web.json`):
+
+| Configuração | Frame Time Médio | FPS Equivalente | Frame Time P50 | Frame Time P95 | Frame Time P99 | Draw Calls |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`full` (Produção)** | 11.671 ms | 85.7 FPS | 11.41 ms | 15.69 ms | 18.47 ms | 38-43 |
+| **`crop_fxaa_draw`** | 11.265 ms | 88.8 FPS | 11.13 ms | 15.08 ms | 18.08 ms | 38-44 |
+| **`crop_fxaa_copy`** | 10.745 ms | 93.1 FPS | 10.49 ms | 14.29 ms | 17.39 ms | 38-44 |
+| **`no_fxaa`** | 9.556 ms | 104.6 FPS | 9.46 ms | 12.74 ms | 15.04 ms | 35-43 |
+
+**Diferenças Pareadas Web (Média de 15 pares correspondentes cenário × run):**
+- `full - crop_fxaa_draw`: **+0.406 ms** (11/15 positivo).
+- `crop_fxaa_draw - crop_fxaa_copy`: **+0.521 ms** (9/15 positivo).
+- `crop_fxaa_copy - no_fxaa`: **+1.188 ms** (10/15 positivo).
+- `full - no_fxaa`: **+2.115 ms** (12/15 positivo).
+
+---
+
+### C. Auditoria Visual, Fronteira e Limitações Estruturais
+
+1. **Confirmação do Algoritmo FXAA:**
+   - A captura em zoom 4× (`docs/migration/visual/crop_fxaa_detail_zoom_4x.png`) demonstra que dentro do ROI de 50%×50%, o shader FXAA opera plenamente: o anel de alcance roxo do dummy, a cúpula do modelo 3D e as linhas de grid apresentam suavização subpixel perfeitamente idêntica ao modo `full`, em contraste com a escadaria crua do modo `no_fxaa`.
+2. **Análise de Costura e Borda (`docs/migration/visual/crop_fxaa_seam_analysis.png`):**
+   - O padding de 16px do `BackBufferCopy` (`roi.grow(16.0)`) previne com sucesso artefatos de amostragem na borda do shader (não há halos pretos, distorções ou pixels estourados).
+   - Contudo, existe uma descontinuidade perceptível gritante na fronteira: qualquer elemento que cruze a borda do ROI (arco verde de alcance de ataque, linhas de grade da arena, piso) passa abruptamente de liso para serrilhado.
+3. **Ausência de Equivalência Visual:**
+   - 75% da área da tela (bordas da arena, agulhas/torres, elementos de cenário externos) permanece completamente sem antialiasing.
+   - Portanto, a marca de 3.30 ms obtida no `crop_fxaa_copy` **NÃO constitui cumprimento da meta de 300 FPS em produção**, funcionando exclusivamente como balizador quantitativo da distribuição de custos de hardware.
+4. **Verificação de Regressão e Hotkeys (`tools/verify_hotkeys_and_full.gd`):**
+   - As teclas F1 (sombras), F2 (MSAA) e F4 (FXAA) foram testadas via script dedicado e funcionam perfeitamente.
+   - A finalização do benchmark e a restauração do layout fullscreen (`anchor_right = 1.0, anchor_bottom = 1.0, offsets = 0`) operam de forma limpa sem deixar nós orfãos ou propriedades alteradas.
