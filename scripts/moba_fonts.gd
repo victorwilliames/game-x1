@@ -2,7 +2,7 @@ class_name MobaFonts
 extends RefCounted
 
 ## Manages variable font weights for Outfit-Variable.ttf and embedded Consolas-Bold.ttf
-## Calibrated to match Chrome DirectWrite gamma/stem-darkening on dark backgrounds 1:1.
+## Fonts are tuned for readable small 2D text; exact Chrome DOM parity requires visual validation.
 
 const BASE_FONT_PATH := "res://assets/fonts/Outfit-Variable.ttf"
 const MONO_FONT_PATH := "res://assets/fonts/Consolas-Bold.ttf"
@@ -15,6 +15,15 @@ static var _mono_bold: Font = null
 static func _get_base_font() -> FontFile:
 	if _base_font == null:
 		_base_font = load(BASE_FONT_PATH) as FontFile
+		if _base_font:
+			# Keep variable weight support; apply settings before FontVariation caching.
+			# At 9px AUTO uses quarter-pixel positioning, unlike forcing that
+			# rasterization at every larger font size.
+			# Oversampling is the only change from the usual engine defaults.
+			_base_font.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+			_base_font.hinting = TextServer.HINTING_LIGHT
+			_base_font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
+			_base_font.oversampling = 2.0
 	return _base_font
 
 static func get_outfit(weight: int = 500, extra_spacing_glyph: int = 0) -> Font:

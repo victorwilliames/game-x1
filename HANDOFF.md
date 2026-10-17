@@ -217,3 +217,14 @@ Para atingir 300 FPS (3.33 ms) com antialiasing ativo, a estratégia ideal **nã
 - **Solução:** `_die()` e `_respawn()` zeram `flash_timer` e restauram o material original com `_apply_flash(false)`. `set_outline_visible()` só muda `.visible` se houver diferença real, e deixa dummies mortos sempre sem outline.
 - **Regressões testáveis:** `scripts/test_combat.gd` Check 6 agora cobre flash limpo, material de corpo/olhos, bloqueio de outline em morto e restauro após `update_dummy(3.01)`. A estrutura de sete seções originais do teste foi mantida.
 - **Status:** revisão estática do código e testes adicionados, **execução local do Godot pendente**. Após pull, rodar `scripts/test.ps1` e repetir ataque letal no jogo para confirmar o aspecto do respawn no Windows/Web.
+
+
+---
+
+## ChatGPT — teste incremental de nitidez da Outfit 9px (base `3a49ee7`)
+
+- **Escopo:** somente `scripts/moba_fonts.gd` e documentação; sem alterações no shader, gameplay, barras ou câmera.
+- **Alteração:** configurar explicitamente `FONT_ANTIALIASING_GRAY`, `HINTING_LIGHT`, `SUBPIXEL_POSITIONING_AUTO` e `oversampling = 2.0` na `Outfit-Variable.ttf`, antes de criar as `FontVariation` em cache. As três primeiras correspondem aos defaults esperados; o experimento efetivo é oversampling 2×. Com AUTO, texto de 9px usa posicionamento em quartos de pixel, sem impor isso a todos os tamanhos.
+- **Não alterado:** `floating_bars.gd` mantém projeção arredondada, barras de 1px, contornos, sombras e geometria originais. Mudar o snapping completo sem comparar imagens pode borrar barras ou aumentar draw calls; tratar como etapa A/B separada.
+- **Validar no Antigravity:** `git pull --ff-only origin main` (preservar alterações locais), cinco suítes via `scripts/test.ps1`, export via `scripts/export_web.ps1`, capturas antes/depois 1280×720 DPR 1 dos textos de 9px (Caitlyn/Dummies/HUD), movimento/câmera, contraste e legibilidade, draw calls, CPU/GPU e FPS com `full` (três repetições). Confirmar no Chrome Web. Reverter via novo commit se houver piora relevante.
+- **Limitação:** edição remota via GitHub, sem Godot/Chrome local nesta sessão. Melhoria visual e testes não foram comprovados.
