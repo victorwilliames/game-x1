@@ -17,6 +17,7 @@ extends Node
 ##
 ## FXAA decomposition (available natively and on Web):
 ##   --bench-configs=full,pass_only,crop_draw,crop_copy,no_fxaa
+## Full-screen AA alternative comparison: full,msaa2x,msaa4x,no_fxaa
 ##   full:       screen copy/compositing AND full FXAA filter (production)
 ##   pass_only:  fullscreen auto-copy + fullscreen passthrough shader
 ##   crop_draw:  fullscreen auto-copy + cropped central 50%x50% passthrough
@@ -212,6 +213,9 @@ func _apply_config(cfg: String) -> void:
 		"msaa2x":
 			fxaa = false
 			msaa = Viewport.MSAA_2X
+		"msaa4x":
+			fxaa = false
+			msaa = Viewport.MSAA_4X
 		"bare":
 			fxaa = false
 			shadows = false

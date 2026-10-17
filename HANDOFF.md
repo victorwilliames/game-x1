@@ -330,3 +330,20 @@ Foram executadas baterias completas e pareadas de benchmarks (3 execuções × 1
 4. **Verificação de Regressão e Hotkeys (`tools/verify_hotkeys_and_full.gd`):**
    - As teclas F1 (sombras), F2 (MSAA) e F4 (FXAA) foram testadas via script dedicado e funcionam perfeitamente.
    - A finalização do benchmark e a restauração do layout fullscreen (`anchor_right = 1.0, anchor_bottom = 1.0, offsets = 0`) operam de forma limpa sem deixar nós orfãos ou propriedades alteradas.
+
+
+---
+
+## ChatGPT — Benchmark de cobertura total: MSAA 2×/4× vs FXAA (base `ac3781b`)
+
+**Conclusão da POC de recorte:** o FXAA 25% + BackBufferCopy regional é matematicamente mais rápido, mas o relatório visual documentou costura visível e 75% da imagem sem antialiasing. NÃO adotar Bounding Box Dinâmico em produção sem resolver essas limitações. Números oficiais: `crop_fxaa_copy` nativo 3.457 ms (289.2 FPS equivalentes), Web 10.745 ms (93.1 FPS); `full` nativo 4.366 ms (229 FPS), Web 11.671 ms (85.7 FPS).
+
+**Nova POC somente em diagnóstico:** `scripts/perf_bench.gd` agora aceita `msaa4x` além do `msaa2x` já existente. Para ambos, desativa o passe FXAA e usa MSAA 3D no viewport. Capturador `tools/capture_aa_modes.gd`, runner `tools/run_aa_modes_web.cjs` e analisador pareado `tools/analyze_aa_modes.py` acompanham a POC. `full` continua sendo a configuração de produção, sem mudanças de cenas ou materiais.
+
+**Rodar no Windows:** `powershell -ExecutionPolicy Bypass -File scripts/run_perf_bench.ps1 -Configs "full,msaa2x,msaa4x,no_fxaa" -Runs 3 -Sec 12 -Warmup 6 -OutFile "docs/migration/visual/aa_fullscreen_native.json"`.
+
+**Rodar no Chrome:** exportação atualizada e servidor Web em `http://localhost:8080/`, então `node tools/run_aa_modes_web.cjs` para `docs/migration/visual/aa_fullscreen_web.json`. Comparar resultados via `python tools/analyze_aa_modes.py docs/migration/visual/aa_fullscreen_native.json docs/migration/visual/aa_fullscreen_web.json`.
+
+**Inspeção visual obrigatória:** Godot/MSAA 3D funciona no Compatibility, mas **não é equivalente ao FXAA de pós-processamento** em linhas do grid (`GridHelper`), bordas de anéis, transparência, efeitos e aliasing produzido em shader. Comparar capturas em zoom 4× e em tamanho real de Caitlyn, dummies, grid dourado/azul, anéis e sombras; inspecionar também durante movimento de câmera, verificar 1px do HUD e qualidade das fontes 9px. Não aceitar regressões por aumento aparente de FPS.
+
+**Testar antes de aprovar:** cinco suítes, export Web, atalhos F1/F2/F4, restauração para `full` após benchmark, disponibilidade real do MSAA2x/4x no GPU/driver do navegador, cenário/frames corretamente executados, draw calls e tempo GPU quando disponível (WebGL não possui métrica equivalente aqui). Não afirmar 300 FPS com qualidade plena sem medidas e equivalência visual comprovada. **O código foi alterado remotamente no GitHub, sem executar Godot/Chrome neste turno.**
