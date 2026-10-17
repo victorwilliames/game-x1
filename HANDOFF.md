@@ -416,3 +416,17 @@ As evidências visuais capturadas em [`aa_modes_visual_comparison.png`](file:///
 2. **Anéis de Alcance e Seleção:** Os círculos de projeção no chão também sofrem de serrilhamento severo sem o pós-processamento de luminância do FXAA.
 3. **Fidelidade Visual Superior do FXAA:** O FXAA atua no espaço de imagem pós-resolução sobre o buffer 3D, suavizando tanto a silhueta da heroína/dummies quanto as linhas finas do grid e os círculos de combate, entregando fidelidade 1:1 ao Three.js original com mais do que o dobro do framerate do MSAA.
 4. **Conclusão:** O MSAA 2× e 4× é uma alternativa inviável para o projeto: possui **pior qualidade visual** (grade serrilhada) e **desempenho substancialmente inferior** (-79% a -131% FPS).
+
+
+---
+
+## ChatGPT — Experimento full-frame FXAA threshold (base `879e143`)
+
+- **Motivação:** os dados pareados de Windows/Web do Antigravity rejeitam MSAA2x/4x como substituto do FXAA neste hardware. No último lote, `full` foi 3.708 ms/269.7 FPS eq. Windows e 7.210 ms/138.7 FPS eq. Web. O objetivo 300 FPS com qualidade total NÃO foi atingido. Cautela: as medições full variaram bastante entre lotes; manter condições ambientais e comparações pareadas.
+- **Ressalva do relatório:** o grid atual em `scenes/arena/grid_helper.gd` usa `Mesh.PRIMITIVE_LINES` na maior parte da malha e fitas geométricas com shader alpha nos eixos dourados; não é uma textura de grid exclusivamente em shader do piso. O efeito visual negativo do MSAA foi reportado, mas não atribuir todo o fenômeno somente a um fragment shader.
+- **POC:** `shaders/fxaa_threshold_bench.gdshader` copia o filtro de produção completo, mas substitui SOMENTE a constante de early-exit 0.035 por uniform `edge_threshold`. Novos modos `fxaa_thr035` (controle com uniform 0.035), `fxaa_thr050` e `fxaa_thr070` cobrem 100% da cena com FXAA real. `full` permanece exatamente original. Comparar primeiro `full` vs `fxaa_thr035` para identificar eventual custo de shader uniform/diferença de compilação; comparar os três limiares pareados. A cópia de tela cheia continua existindo, então não presumir ganho grande.
+- **Qualidade:** valores superiores podem perder AA em linhas azuis de baixo contraste, contornos e anéis translúcidos, sombras. Capturar 1x e zoom 4x e testar em movimento. Fotos tiradas em quadros diferentes com Caitlyn/dummy animados não são comparações de pixels controladas: congelar estado temporal antes de métricas numéricas ou analisar regiões estáticas. Rejeitar mesmo um modo mais rápido se perder fidelidade visual.
+- **Windows:** `powershell -ExecutionPolicy Bypass -File scripts/run_perf_bench.ps1 -Configs "full,fxaa_thr035,fxaa_thr050,fxaa_thr070,no_fxaa" -Runs 3 -Sec 12 -Warmup 6 -OutFile "docs/migration/visual/fxaa_threshold_native.json"`.
+- **Web:** export atualizada, servidor em localhost:8080 e `node tools/run_fxaa_threshold_web.cjs`. Auditoria: `python tools/analyze_fxaa_threshold.py docs/migration/visual/fxaa_threshold_native.json docs/migration/visual/fxaa_threshold_web.json`. Capturas: `tools/capture_fxaa_threshold_modes.gd`.
+- **Validação:** Godot parser, testes 5/5, Chrome WebGL2, F1/F2/F4, restauração `full`, 75 registros por plataforma (3 runs × 5 cenários × 5 modos), métricas mean/p50/p95/p99, GPU nativa quando disponível, evidências visuais e publicação de dados sem segredos.
+- **Nenhuma alteração** na scene, shader de produção, gameplay, HUD, nem modo FXAA padrão. Diagnóstico remoto sem Godot/Chrome local. O Antigravity deve testar antes de usar resultados.

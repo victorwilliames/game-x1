@@ -18,6 +18,10 @@ extends Node
 ## FXAA decomposition (available natively and on Web):
 ##   --bench-configs=full,pass_only,crop_draw,crop_copy,no_fxaa
 ## Full-screen AA alternative comparison: full,msaa2x,msaa4x,no_fxaa
+## FXAA derivative early-exit test (all modes FULLSCREEN):
+##   full,fxaa_thr035,fxaa_thr050,fxaa_thr070,no_fxaa.
+##   The three threshold modes are benchmark-only. Never change production FXAA
+##   without measured visual parity of grid, rings and character outlines.
 ##   full:       screen copy/compositing AND full FXAA filter (production)
 ##   pass_only:  fullscreen auto-copy + fullscreen passthrough shader
 ##   crop_draw:  fullscreen auto-copy + cropped central 50%x50% passthrough
@@ -53,6 +57,8 @@ var _info: Dictionary = {}
 # antialiasing filter. Combined with full and no_fxaa it isolates pass overhead.
 var _baseline_fxaa_material: Material = null
 var _passthrough_material: ShaderMaterial = null
+# Separate diagnostic material: production shader and its material are immutable.
+var _threshold_bench_material: ShaderMaterial = null
 var _benchmark_region_copy: BackBufferCopy = null
 
 # Fixed central region simplifies the experiment: half viewport width and
@@ -228,7 +234,20 @@ func _apply_config(cfg: String) -> void:
 		if _baseline_fxaa_material == null:
 			_baseline_fxaa_material = fxaa_rect.material
 		var passthrough := cfg == "pass_only" or cfg == "crop_draw" or cfg == "crop_copy"
-		if passthrough:
+		var threshold_bench := cfg == "fxaa_thr035" or cfg == "fxaa_thr050" or cfg == "fxaa_thr070"
+		if threshold_bench:
+			if _threshold_bench_material == null:
+				_threshold_bench_material = ShaderMaterial.new()
+				_threshold_bench_material.shader = load("res://shaders/fxaa_threshold_bench.gdshader") as Shader
+			var edge_threshold: float = 0.035
+			match cfg:
+				"fxaa_thr050":
+					edge_threshold = 0.050
+				"fxaa_thr070":
+					edge_threshold = 0.070
+			_threshold_bench_material.set_shader_parameter("edge_threshold", edge_threshold)
+			fxaa_rect.material = _threshold_bench_material
+		elif passthrough:
 			if _passthrough_material == null:
 				_passthrough_material = ShaderMaterial.new()
 				_passthrough_material.shader = load("res://shaders/screen_passthrough.gdshader") as Shader
